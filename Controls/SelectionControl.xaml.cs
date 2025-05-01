@@ -7,7 +7,7 @@ using EnvDTE;
 using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.Shell.Interop;
 
-namespace DiplomProject.Dialogs
+namespace DiplomProject.Controls
 {
     /// <summary>
     /// Логика взаимодействия для SelectionControl.xaml

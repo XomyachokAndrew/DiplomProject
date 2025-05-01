@@ -1,9 +1,10 @@
 ﻿using System;
 using System.ComponentModel.Design;
 using System.Windows;
-using DiplomProject.Dialogs;
-using DiplomProject.Helper;
+using DiplomProject.Controls;
+using DiplomProject.Services;
 using Microsoft.VisualStudio.Shell;
+using Microsoft.VisualStudio.Shell.Interop;
 using Task = System.Threading.Tasks.Task;
 
 namespace DiplomProject
@@ -102,11 +103,12 @@ namespace DiplomProject
             {
                 control.OkClicked += (s, args) =>
                 {
-                    var xamlGenerator = new XamlGenerator();
-                    xamlGenerator.GenerateXaml(control.SelectedModel,
-                         control.GenerateViewModel,
-                         control.UseDataBinding,
-                         control.AddValidation);
+                    var xamlGenerator = new XamlGenerator(package);
+                    xamlGenerator.GenerateXaml(control.SelectedModel
+                        //,control.GenerateViewModel
+                        //,control.UseDataBinding
+                        //,control.AddValidation
+                         );
                     dialog.Close();
                 };
 
