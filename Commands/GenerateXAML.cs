@@ -105,9 +105,9 @@ namespace DiplomProject
                 {
                     var xamlGenerator = new XamlGenerator(package);
                     xamlGenerator.GenerateXaml(control.SelectedModel
-                        //,control.GenerateViewModel
-                        //,control.UseDataBinding
-                        //,control.AddValidation
+                        ,control.GenerateViewModel
+                         ,control.UseDataBinding
+                         //,control.AddValidation
                          );
                     dialog.Close();
                 };
