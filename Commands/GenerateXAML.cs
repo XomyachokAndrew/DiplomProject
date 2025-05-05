@@ -103,7 +103,7 @@ namespace DiplomProject
             {
                 control.OkClicked += (s, args) =>
                 {
-                    var xamlGenerator = new XamlGenerator(package);
+                    var xamlGenerator = new XamlGeneratorService(package);
                     xamlGenerator.GenerateXaml(control.SelectedModel
                         ,control.GenerateViewModel
                          ,control.UseDataBinding
