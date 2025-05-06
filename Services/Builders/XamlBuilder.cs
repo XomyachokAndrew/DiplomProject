@@ -2,6 +2,7 @@
 using System.Text;
 using DiplomProject.Services.Resolver;
 using EnvDTE;
+using EnvDTE80;
 using Microsoft.VisualStudio.Shell;
 
 namespace DiplomProject.Services.Builder
@@ -17,7 +18,7 @@ namespace DiplomProject.Services.Builder
             var namespaces = _namespaceResolver.GetProjectNamespace(codeClass);
 
             string xamlContent = BuildXamlContent(codeClass, isUseDataBinding, namespaces);
-            string csContent = BuildCsForXamlContent(codeClass, namespaces);
+            string csContent = BuildCsForXamlContent(codeClass, isUseDataBinding, namespaces);
 
             return (xamlContent, csContent);
         }
@@ -26,42 +27,63 @@ namespace DiplomProject.Services.Builder
         {
             ThreadHelper.ThrowIfNotOnUIThread();
             var controls = new StringBuilder();
+            var columns = new StringBuilder();
             foreach (CodeElement member in codeClass.Members)
             {
                 if (member is CodeProperty property)
                 {
+                    //var dataProperty = isUseDataBinding
+                    //    ? _propertyControlBuilder.BuildDataBoundPropertyControl(property)
+                    //    : _propertyControlBuilder.BuildPropertyControl(property);
+                    //controls.AppendLine(dataProperty);
                     var dataProperty = isUseDataBinding
-                        ? _propertyControlBuilder.BuildDataBoundPropertyControl(property)
-                        : _propertyControlBuilder.BuildPropertyControl(property);
-                    controls.AppendLine(dataProperty);
+                        ? _propertyControlBuilder.BuildDataBoundPropertyColumn(property) : _propertyControlBuilder.BuildDataBoundPropertyColumn(property);
+                    columns.AppendLine(dataProperty);
                 }
             }
 
-            string viewModelBinding = isUseDataBinding
-                ? $"\n        DataContext=\"{{Binding {codeClass.Name}ViewModel}}\""
-                : "";
-
+            //            return $@"<Window x:Class=""{namespaces["project"]}.Views.{codeClass.Name}View""
+            //        xmlns=""http://schemas.microsoft.com/winfx/2006/xaml/presentation""
+            //        xmlns:x=""http://schemas.microsoft.com/winfx/2006/xaml""
+            //        xmlns:d=""http://schemas.microsoft.com/expression/blend/2008""
+            //        xmlns:mc=""http://schemas.openxmlformats.org/markup-compatibility/2006""
+            //        xmlns:local=""clr-namespace:{namespaces["project"]}""
+            //        mc:Ignorable=""d""
+            //        Title=""{codeClass.Name}View"" Height=""450"" Width=""800""{viewModelBinding}>
+            //    <Grid>
+            //        <StackPanel>
+            //            {controls}
+            //        </StackPanel>
+            //    </Grid>
+            //</Window>";
             return $@"<Window x:Class=""{namespaces["project"]}.Views.{codeClass.Name}View""
-        xmlns=""http://schemas.microsoft.com/winfx/2006/xaml/presentation""
-        xmlns:x=""http://schemas.microsoft.com/winfx/2006/xaml""
-        xmlns:d=""http://schemas.microsoft.com/expression/blend/2008""
-        xmlns:mc=""http://schemas.openxmlformats.org/markup-compatibility/2006""
-        xmlns:local=""clr-namespace:{namespaces["project"]}""
-        mc:Ignorable=""d""
-        Title=""{codeClass.Name}View"" Height=""450"" Width=""800""{viewModelBinding}>
-    <Grid>
-        <StackPanel>
-            {controls}
-        </StackPanel>
-    </Grid>
-</Window>";
+                    xmlns=""http://schemas.microsoft.com/winfx/2006/xaml/presentation""
+                    xmlns:x=""http://schemas.microsoft.com/winfx/2006/xaml""
+                    xmlns:d=""http://schemas.microsoft.com/expression/blend/2008""
+                    xmlns:mc=""http://schemas.openxmlformats.org/markup-compatibility/2006""
+                    xmlns:local=""clr-namespace:{namespaces["project"]}""
+                    mc:Ignorable=""d""
+                    Title=""{codeClass.Name}View"" Height=""450"" Width=""800"">
+                <Grid>
+                    <DataGrid ItemsSource=""{{Binding Items}}"" AutoGenerateColumns=""False"" IsReadOnly=""True"">
+                        <DataGrid.Columns>
+                            {columns}
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </Grid>
+            </Window>";
         }
 
-        private string BuildCsForXamlContent(CodeClass modelClass, Dictionary<string, string> namespaces)
+        private string BuildCsForXamlContent(CodeClass modelClass, bool isUseDataBinding, Dictionary<string, string> namespaces)
         {
             ThreadHelper.ThrowIfNotOnUIThread();
-            return $@"
-using System.Windows;
+
+            string viewModelBinding = isUseDataBinding
+                ? $"DataContext = new {modelClass.Name}ViewModel();"
+                : "";
+
+            return $@"using System.Windows;
+using {namespaces["project"]}.ViewModels;
 
 namespace {namespaces["project"]}.Views
 {{
@@ -70,6 +92,7 @@ namespace {namespaces["project"]}.Views
         public {modelClass.Name}View()
         {{
             InitializeComponent();
+            {viewModelBinding}
         }}
     }}    
 }}";

@@ -20,12 +20,12 @@ namespace DiplomProject.Services.Builder
     
         private void Execute{function.Name}(object parameter)
         {{
-            _model.{function.Name}({GetMethodParameters(function)});
+            _model?.{function.Name}({GetMethodParameters(function)});
         }}
     
         private bool CanExecute{function.Name}(object parameter)
         {{
-            return true;
+            return _model != null;
         }}";
         }
 
@@ -36,12 +36,12 @@ namespace DiplomProject.Services.Builder
                 .OfType<CodeFunction>()
                 .Where(f =>
                 {
-                    Microsoft.VisualStudio.Shell.ThreadHelper.ThrowIfNotOnUIThread();
+                    ThreadHelper.ThrowIfNotOnUIThread();
                     return f.Access == vsCMAccess.vsCMAccessPublic;
                 })
                 .Select(f =>
                 {
-                    Microsoft.VisualStudio.Shell.ThreadHelper.ThrowIfNotOnUIThread();
+                    ThreadHelper.ThrowIfNotOnUIThread();
                     return $"{f.Name}Command = new RelayCommand(Execute{f.Name}, CanExecute{f.Name})";
                 });
 
@@ -51,12 +51,16 @@ namespace DiplomProject.Services.Builder
         private string GetMethodParameters(CodeFunction function)
         {
             ThreadHelper.ThrowIfNotOnUIThread();
-            return string.Join(", ", function.Parameters.OfType<CodeParameter>()
+            var parameters = function.Parameters.OfType<CodeParameter>()
                 .Select(p =>
                 {
-                    Microsoft.VisualStudio.Shell.ThreadHelper.ThrowIfNotOnUIThread();
+                    ThreadHelper.ThrowIfNotOnUIThread();
                     return $"({p.Type.AsString})parameter";
-                }));
+                });
+
+            return function.Parameters.Count > 0
+                ? string.Join(", ", parameters)
+                : string.Empty;
         }
     }
 }

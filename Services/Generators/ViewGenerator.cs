@@ -15,11 +15,13 @@ namespace DiplomProject.Services.Generators
     {
         private readonly AsyncPackage _package;
         private readonly XamlBuilder _xamlBuilder;
+        private readonly MessageService _messageService;
 
         public ViewGenerator(AsyncPackage package)
         {
             _package = package ?? throw new ArgumentNullException(nameof(package));
             _xamlBuilder = new XamlBuilder();
+            _messageService = new MessageService(package);
         }
 
         public void GenerateViewFiles(CodeClass modelClass, ProjectItem targetProjectItem, bool isUseDataBinding)
@@ -47,11 +49,11 @@ namespace DiplomProject.Services.Generators
                     csContent,
                     "Views");
 
-                ShowSuccessMessage($"View for {modelClass.Name} successfully generated!");
+                _messageService.ShowSuccessMessage($"View for {modelClass.Name} successfully generated!");
             }
             catch (Exception ex)
             {
-                ShowErrorMessage($"Error generating View: {ex.Message}");
+                _messageService.ShowErrorMessage($"Error generating View: {ex.Message}");
             }
         }
 
@@ -80,28 +82,6 @@ namespace DiplomProject.Services.Generators
                 }) ?? targetProjectItem.ContainingProject.ProjectItems.AddFolder(folderName);
 
             folderItem.ProjectItems.AddFromFile(filePath1);
-        }
-
-        private void ShowSuccessMessage(string message)
-        {
-            VsShellUtilities.ShowMessageBox(
-                _package,
-                message,
-                "Success",
-                OLEMSGICON.OLEMSGICON_INFO,
-                OLEMSGBUTTON.OLEMSGBUTTON_OK,
-                OLEMSGDEFBUTTON.OLEMSGDEFBUTTON_FIRST);
-        }
-
-        private void ShowErrorMessage(string message)
-        {
-            VsShellUtilities.ShowMessageBox(
-                _package,
-                message,
-                "Error",
-                OLEMSGICON.OLEMSGICON_CRITICAL,
-                OLEMSGBUTTON.OLEMSGBUTTON_OK,
-                OLEMSGDEFBUTTON.OLEMSGDEFBUTTON_FIRST);
         }
     }
 }

@@ -1,12 +1,9 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using DiplomProject.Services.Generators;
+using DiplomProject.Services.Finders;
 using EnvDTE;
-using Microsoft.VisualStudio.Shell.Interop;
 using Microsoft.VisualStudio.Shell;
+using System.IO;
 
 namespace DiplomProject.Services
 {
@@ -15,12 +12,16 @@ namespace DiplomProject.Services
         private readonly AsyncPackage _package;
         private readonly ViewGenerator _viewGenerator;
         private readonly ViewModelGenerator _viewModelGenerator;
+        private readonly DataSourceFinder _dataSourceFinder; 
+        private readonly MessageService _messageService;
 
         public XamlGeneratorService(AsyncPackage package)
         {
             _package = package ?? throw new ArgumentNullException(nameof(package));
             _viewGenerator = new ViewGenerator(package);
             _viewModelGenerator = new ViewModelGenerator(package);
+            _dataSourceFinder = new DataSourceFinder();
+            _messageService = new MessageService(package);
         }
 
         public void GenerateXaml(string className, bool isGenerateViewModel, bool isUseDataBinding)
@@ -31,44 +32,27 @@ namespace DiplomProject.Services
                 var dte = (DTE)Package.GetGlobalService(typeof(DTE));
                 var selectedItem = dte.SelectedItems.Item(1).ProjectItem;
 
-                var finder = new CodeClassFinder();
-                var codeClass = finder.FindClassByName(className) ?? throw new Exception($"Class {className} not found");
-
+                var codeClassfinder = new CodeClassFinder();
+                var codeClass = codeClassfinder.FindClassByName(className) ?? throw new Exception($"Class {className} not found");
+                
                 _viewGenerator.GenerateViewFiles(codeClass, selectedItem, isUseDataBinding);
 
                 if (isGenerateViewModel)
                 {
-                    _viewModelGenerator.GenerateViewModel(codeClass, selectedItem);
+                    // Находим источник данных
+                    string projectPath = Path.GetDirectoryName(selectedItem.ContainingProject.FullName);
+                    string jsonFilePath = _dataSourceFinder.FindJsonFile(projectPath, className);
+                    string dbSetName = string.IsNullOrEmpty(jsonFilePath) ? _dataSourceFinder.FindDbSetName(codeClass, projectPath) : null;
+
+                    _viewModelGenerator.GenerateViewModel(codeClass, selectedItem, jsonFilePath, dbSetName);
                 }
 
-                ShowSuccessMessage($"XAML for {className} successfully generated!");
+                _messageService.ShowSuccessMessage($"XAML for {className} successfully generated!");
             }
             catch (Exception ex)
             {
-                ShowErrorMessage($"Error generating XAML: {ex.Message}");
+                _messageService.ShowErrorMessage($"Error generating XAML: {ex.Message}");
             }
-        }
-
-        private void ShowSuccessMessage(string message)
-        {
-            VsShellUtilities.ShowMessageBox(
-                _package,
-                message,
-                "Success",
-                OLEMSGICON.OLEMSGICON_INFO,
-                OLEMSGBUTTON.OLEMSGBUTTON_OK,
-                OLEMSGDEFBUTTON.OLEMSGDEFBUTTON_FIRST);
-        }
-
-        private void ShowErrorMessage(string message)
-        {
-            VsShellUtilities.ShowMessageBox(
-                _package,
-                message,
-                "Error",
-                OLEMSGICON.OLEMSGICON_CRITICAL,
-                OLEMSGBUTTON.OLEMSGBUTTON_OK,
-                OLEMSGDEFBUTTON.OLEMSGDEFBUTTON_FIRST);
         }
     }
 }

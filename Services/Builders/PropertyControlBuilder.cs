@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Drawing.Printing;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -29,24 +30,34 @@ namespace DiplomProject.Services.Builder
             return $"{label}\n{control}";
         }
 
+        public string BuildDataBoundPropertyColumn(CodeProperty property)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            var dataColumn = BuildColumnByType(property, "");
+            return $@"<DataGridTextColumn {dataColumn}/>";
+        }
+
+        private string BuildColumnByType(CodeProperty property, string bindingMode)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            var propType = _typeResolver.GetPropertyType(property).ToLower();
+
+            return $"Header=\"{property.Name}\" Binding=\"{{Binding {property.Name}}}\" Width=\"Auto\"";
+        }
+
         private string BuildControlByType(CodeProperty property, string bindingMode)
         {
             ThreadHelper.ThrowIfNotOnUIThread();
             var propType = _typeResolver.GetPropertyType(property).ToLower();
             string margin = "Margin=\"0,5,0,0\"";
-            string additionalAttributes = "";
-
             if (propType.Contains("bool"))
             {
                 return $"<CheckBox IsChecked=\"{{Binding {property.Name}{bindingMode}}}\" {margin}/>";
             }
             if (propType.Contains("date"))
             {
-                additionalAttributes = "SelectedDateFormat=\"Short\"";
-                if (bindingMode.Contains("TwoWay"))
-                {
-                    additionalAttributes += " UpdateSourceTrigger=\"PropertyChanged\"";
-                }
+                string additionalAttributes = "SelectedDateFormat=\"Short\"";
+
                 return $"<DatePicker SelectedDate=\"{{Binding {property.Name}{bindingMode}}}\" {additionalAttributes} {margin}/>";
             }
 

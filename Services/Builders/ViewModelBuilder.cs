@@ -1,4 +1,5 @@
-﻿using System.Text;
+﻿using System.Collections.Generic;
+using System.Text;
 using DiplomProject.Services.Resolver;
 using EnvDTE;
 using Microsoft.VisualStudio.Shell;
@@ -10,33 +11,42 @@ namespace DiplomProject.Services.Builder
         private readonly NamespaceResolver _namespaceResolver = new NamespaceResolver();
         private readonly PropertyCodeBuilder _propertyCodeBuilder = new PropertyCodeBuilder();
         private readonly CommandCodeBuilder _commandCodeBuilder = new CommandCodeBuilder();
+        private readonly DataSourceResolver _dataSourceResolver = new DataSourceResolver();
 
-        public string BuildViewModelContent(CodeClass modelClass)
+        public string BuildViewModelContent(CodeClass modelClass, string jsonFilePath = null, string dbSetName = null)
         {
             ThreadHelper.ThrowIfNotOnUIThread();
             var namespaces = _namespaceResolver.GetProjectNamespace(modelClass);
 
             var propertiesCode = new StringBuilder();
             var commandsCode = new StringBuilder();
+            var collectionsCode = new StringBuilder();
+            var initializationCode = new StringBuilder();
 
             BuildMembersCode(modelClass, propertiesCode, commandsCode);
+            BuildCollectionsCode(modelClass, collectionsCode);
+            BuildInitializationCode(modelClass, initializationCode, jsonFilePath, dbSetName, namespaces);
+
+            string additionalUsings = _dataSourceResolver.GetAdditionalUsings(jsonFilePath, dbSetName);
 
             return $@"using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Windows.Input;
+{additionalUsings}
 using {namespaces["model"]};
 
 namespace {namespaces["project"]}.ViewModels
 {{
     public class {modelClass.Name}ViewModel : INotifyPropertyChanged
     {{
-        private readonly {modelClass.Name} _model;
+        private {modelClass.Name} _model;
+        {collectionsCode}
 
-        public {modelClass.Name}ViewModel({modelClass.Name} model)
+        public {modelClass.Name}ViewModel()
         {{
-            _model = model ?? throw new ArgumentNullException(nameof(model));
+            {initializationCode}
             {_commandCodeBuilder.GenerateCommandInitializations(modelClass)}
         }}
         
@@ -69,6 +79,58 @@ namespace {namespaces["project"]}.ViewModels
                 {
                     commandsCode.AppendLine(_commandCodeBuilder.BuildCommandCode(function));
                 }
+            }
+        }
+
+        private void BuildCollectionsCode(CodeClass modelClass, StringBuilder collectionsCode)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            collectionsCode.AppendLine($@"
+        private List<{modelClass.Name}> _items;
+        public List<{modelClass.Name}> Items
+        {{
+            get => _items;
+            set
+            {{
+                _items = value;
+                OnPropertyChanged();
+            }}
+        }}");
+        }
+
+        private void BuildInitializationCode(
+                        CodeClass modelClass,
+                        StringBuilder initializationCode,
+                        string jsonFilePath,
+                        string dbSetName,
+                        Dictionary<string, string> namespaces)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            if (!string.IsNullOrEmpty(jsonFilePath))
+            {
+                initializationCode.AppendLine($@"
+            // Загрузка данных из JSON
+            var json = File.ReadAllText(@""{jsonFilePath}"");
+            Items = JsonSerializer.Deserialize<List<{modelClass.Name}>>(json);
+            _model = new {modelClass.Name}();");
+            }
+            else if (!string.IsNullOrEmpty(dbSetName))
+            {
+                string dbContextName = _dataSourceResolver.GetDbContextName(modelClass, namespaces);
+                initializationCode.AppendLine($@"
+            // Загрузка данных из БД
+            using (var db = new {dbContextName}())
+            {{
+                Items = db.{dbSetName}.ToList();
+            }}
+            _model = new {modelClass.Name}();");
+            }
+            else
+            {
+                initializationCode.AppendLine($@"
+            // Инициализация без внешних данных
+            _model = new {modelClass.Name}();
+            Items = new List<{modelClass.Name}>();");
             }
         }
     }

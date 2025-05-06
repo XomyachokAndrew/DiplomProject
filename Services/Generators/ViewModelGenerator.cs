@@ -15,14 +15,16 @@ namespace DiplomProject.Services.Generators
     {
         private readonly AsyncPackage _package;
         private readonly ViewModelBuilder _viewModelBuilder;
+        private readonly MessageService _messageService;
 
         public ViewModelGenerator(AsyncPackage package)
         {
             _package = package ?? throw new ArgumentNullException(nameof(package));
             _viewModelBuilder = new ViewModelBuilder();
+            _messageService = new MessageService(package);
         }
 
-        public void GenerateViewModel(CodeClass modelClass, ProjectItem targetProjectItem)
+        public void GenerateViewModel(CodeClass modelClass, ProjectItem targetProjectItem, string jsonFilePath, string dbSetName)
         {
             ThreadHelper.ThrowIfNotOnUIThread();
             try
@@ -35,7 +37,7 @@ namespace DiplomProject.Services.Generators
                     Directory.CreateDirectory(viewModelsFolder);
                 }
 
-                string viewModelContent = _viewModelBuilder.BuildViewModelContent(modelClass);
+                string viewModelContent = _viewModelBuilder.BuildViewModelContent(modelClass, jsonFilePath, dbSetName);
                 string viewModelName = $"{modelClass.Name}ViewModel.cs";
                 string viewModelPath = Path.Combine(viewModelsFolder, viewModelName);
 
@@ -51,34 +53,14 @@ namespace DiplomProject.Services.Generators
 
                 viewModelsFolderItem.ProjectItems.AddFromFile(viewModelPath);
 
-                ShowSuccessMessage($"ViewModel for {modelClass.Name} successfully generated!");
+                _messageService.ShowSuccessMessage($"ViewModel for {modelClass.Name} successfully generated!");
             }
             catch (Exception ex)
             {
-                ShowErrorMessage($"Error generating ViewModel: {ex.Message}");
+                _messageService.ShowErrorMessage($"Error generating ViewModel: {ex.Message}");
             }
         }
 
-        private void ShowSuccessMessage(string message)
-        {
-            VsShellUtilities.ShowMessageBox(
-                _package,
-                message,
-                "Success",
-                OLEMSGICON.OLEMSGICON_INFO,
-                OLEMSGBUTTON.OLEMSGBUTTON_OK,
-                OLEMSGDEFBUTTON.OLEMSGDEFBUTTON_FIRST);
-        }
-
-        private void ShowErrorMessage(string message)
-        {
-            VsShellUtilities.ShowMessageBox(
-                _package,
-                message,
-                "Error",
-                OLEMSGICON.OLEMSGICON_CRITICAL,
-                OLEMSGBUTTON.OLEMSGBUTTON_OK,
-                OLEMSGDEFBUTTON.OLEMSGDEFBUTTON_FIRST);
-        }
+        
     }
 }
