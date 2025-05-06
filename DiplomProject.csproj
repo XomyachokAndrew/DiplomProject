@@ -56,12 +56,14 @@
     <Compile Include="Services\Builders\PropertyControlBuilder.cs" />
     <Compile Include="Services\Builders\ViewModelBuilder.cs" />
     <Compile Include="Services\Builders\XamlBuilder.cs" />
-    <Compile Include="Services\CodeClassFinder.cs" />
+    <Compile Include="Services\Finders\CodeClassFinder.cs" />
+    <Compile Include="Services\Finders\DataSourceFinder.cs" />
     <Compile Include="Services\Generators\ViewGenerator.cs" />
     <Compile Include="Services\Generators\ViewModelGenerator.cs" />
-    <Compile Include="Services\Resolver\NamespaceResolver.cs" />
-    <Compile Include="Services\Resolver\TypeResolver.cs" />
-    <Compile Include="Services\XamlGenerator.cs" />
+    <Compile Include="Services\MessageService.cs" />
+    <Compile Include="Services\Resolvers\DataSourceResolver.cs" />
+    <Compile Include="Services\Resolvers\NamespaceResolver.cs" />
+    <Compile Include="Services\Resolvers\TypeResolver.cs" />
     <Compile Include="Services\XamlGeneratorService.cs" />
   </ItemGroup>
   <ItemGroup>
