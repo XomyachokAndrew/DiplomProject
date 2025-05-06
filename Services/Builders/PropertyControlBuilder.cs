@@ -30,10 +30,17 @@ namespace DiplomProject.Services.Builder
             return $"{label}\n{control}";
         }
 
+        public string BuildPropertyColumn(CodeProperty property)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            var dataColumn = BuildColumnByType(property, ", Mode=TwoWay");
+            return $@"<DataGridTextColumn {dataColumn}/>";
+        }
+
         public string BuildDataBoundPropertyColumn(CodeProperty property)
         {
             ThreadHelper.ThrowIfNotOnUIThread();
-            var dataColumn = BuildColumnByType(property, "");
+            var dataColumn = BuildColumnByType(property, ", Mode=TwoWay");
             return $@"<DataGridTextColumn {dataColumn}/>";
         }
 

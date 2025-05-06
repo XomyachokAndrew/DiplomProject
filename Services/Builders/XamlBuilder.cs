@@ -26,36 +26,17 @@ namespace DiplomProject.Services.Builder
         private string BuildXamlContent(CodeClass codeClass, bool isUseDataBinding, Dictionary<string, string> namespaces)
         {
             ThreadHelper.ThrowIfNotOnUIThread();
-            var controls = new StringBuilder();
             var columns = new StringBuilder();
             foreach (CodeElement member in codeClass.Members)
             {
                 if (member is CodeProperty property)
                 {
-                    //var dataProperty = isUseDataBinding
-                    //    ? _propertyControlBuilder.BuildDataBoundPropertyControl(property)
-                    //    : _propertyControlBuilder.BuildPropertyControl(property);
-                    //controls.AppendLine(dataProperty);
                     var dataProperty = isUseDataBinding
-                        ? _propertyControlBuilder.BuildDataBoundPropertyColumn(property) : _propertyControlBuilder.BuildDataBoundPropertyColumn(property);
+                        ? _propertyControlBuilder.BuildDataBoundPropertyColumn(property) : _propertyControlBuilder.BuildPropertyColumn(property);
                     columns.AppendLine(dataProperty);
                 }
             }
 
-            //            return $@"<Window x:Class=""{namespaces["project"]}.Views.{codeClass.Name}View""
-            //        xmlns=""http://schemas.microsoft.com/winfx/2006/xaml/presentation""
-            //        xmlns:x=""http://schemas.microsoft.com/winfx/2006/xaml""
-            //        xmlns:d=""http://schemas.microsoft.com/expression/blend/2008""
-            //        xmlns:mc=""http://schemas.openxmlformats.org/markup-compatibility/2006""
-            //        xmlns:local=""clr-namespace:{namespaces["project"]}""
-            //        mc:Ignorable=""d""
-            //        Title=""{codeClass.Name}View"" Height=""450"" Width=""800""{viewModelBinding}>
-            //    <Grid>
-            //        <StackPanel>
-            //            {controls}
-            //        </StackPanel>
-            //    </Grid>
-            //</Window>";
             return $@"<Window x:Class=""{namespaces["project"]}.Views.{codeClass.Name}View""
                     xmlns=""http://schemas.microsoft.com/winfx/2006/xaml/presentation""
                     xmlns:x=""http://schemas.microsoft.com/winfx/2006/xaml""
