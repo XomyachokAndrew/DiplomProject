@@ -2,6 +2,7 @@
 using System.IO;
 using System.Linq;
 using DiplomProject.Services.Builder;
+using DiplomProject.Services.Builders;
 using EnvDTE;
 using Microsoft.VisualStudio.Shell;
 
@@ -12,11 +13,13 @@ namespace DiplomProject.Services.Generators
         private readonly AsyncPackage _package;
         private readonly XamlBuilder _xamlBuilder;
         private readonly MessageService _messageService;
+        private readonly DialogBuilder _dialogBuilder;
 
         public ViewGenerator(AsyncPackage package)
         {
             _package = package ?? throw new ArgumentNullException(nameof(package));
             _xamlBuilder = new XamlBuilder();
+            _dialogBuilder = new DialogBuilder();
             _messageService = new MessageService(package);
         }
 
@@ -43,6 +46,17 @@ namespace DiplomProject.Services.Generators
                     xamlContent,
                     $"{viewName}.xaml.cs",
                     csContent,
+                    "Views");
+
+                var (dialogXamlContent, dialogCsContent) = _dialogBuilder.BuildDialogContent(modelClass, isUseDataBinding);
+
+                SaveAndAddToProject(
+                    targetProjectItem,
+                    viewsFolder,
+                    $"Dialog{viewName}.xaml",
+                    dialogXamlContent,
+                    $"Dialog{viewName}.xaml.cs",
+                    dialogCsContent,
                     "Views");
 
                 _messageService.ShowSuccessMessage($"View for {modelClass.Name} successfully generated!");

@@ -8,6 +8,7 @@ using DiplomProject.Services.Builder;
 using EnvDTE;
 using Microsoft.VisualStudio.Shell.Interop;
 using Microsoft.VisualStudio.Shell;
+using DiplomProject.Services.Builders;
 
 namespace DiplomProject.Services.Generators
 {
@@ -16,11 +17,13 @@ namespace DiplomProject.Services.Generators
         private readonly AsyncPackage _package;
         private readonly ViewModelBuilder _viewModelBuilder;
         private readonly MessageService _messageService;
+        private readonly DialogViewModelBuilder _dialogViewModelBuilder;
 
         public ViewModelGenerator(AsyncPackage package)
         {
             _package = package ?? throw new ArgumentNullException(nameof(package));
             _viewModelBuilder = new ViewModelBuilder();
+            _dialogViewModelBuilder = new DialogViewModelBuilder();
             _messageService = new MessageService(package);
         }
 
@@ -40,18 +43,14 @@ namespace DiplomProject.Services.Generators
                 string viewModelContent = _viewModelBuilder.BuildViewModelContent(modelClass, jsonFilePath, dbSetName);
                 string viewModelName = $"{modelClass.Name}ViewModel.cs";
                 string viewModelPath = Path.Combine(viewModelsFolder, viewModelName);
+                
+                SaveProjectAndPath(viewModelPath, viewModelContent, targetProjectItem);
 
-                File.WriteAllText(viewModelPath, viewModelContent);
+                string dialogViewModelContent = _dialogViewModelBuilder.BuildDialogViewModelContent(modelClass);
+                string dialogViewModelName = $"Dialog{modelClass.Name}ViewModel.cs";
+                string dialogViewModelPath = Path.Combine(viewModelsFolder, dialogViewModelName);
 
-                var viewModelsFolderItem = targetProjectItem.ContainingProject.ProjectItems
-                    .Cast<ProjectItem>()
-                    .FirstOrDefault(i =>
-                    {
-                        ThreadHelper.ThrowIfNotOnUIThread();
-                        return i.Name == "ViewModels";
-                    }) ?? targetProjectItem.ContainingProject.ProjectItems.AddFolder("ViewModels");
-
-                viewModelsFolderItem.ProjectItems.AddFromFile(viewModelPath);
+                SaveProjectAndPath(dialogViewModelPath, dialogViewModelContent, targetProjectItem);
 
                 _messageService.ShowSuccessMessage($"ViewModel for {modelClass.Name} successfully generated!");
             }
@@ -61,6 +60,20 @@ namespace DiplomProject.Services.Generators
             }
         }
 
-        
+        private void SaveProjectAndPath(string viewModelPath, string viewModelContent, ProjectItem targetProjectItem)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            File.WriteAllText(viewModelPath, viewModelContent);
+
+            var viewModelsFolderItem = targetProjectItem.ContainingProject.ProjectItems
+                .Cast<ProjectItem>()
+                .FirstOrDefault(i =>
+                {
+                    ThreadHelper.ThrowIfNotOnUIThread();
+                    return i.Name == "ViewModels";
+                }) ?? targetProjectItem.ContainingProject.ProjectItems.AddFolder("ViewModels");
+
+            viewModelsFolderItem.ProjectItems.AddFromFile(viewModelPath);
+        }
     }
 }
