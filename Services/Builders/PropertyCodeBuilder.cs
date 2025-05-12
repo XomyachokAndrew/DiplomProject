@@ -8,44 +8,43 @@ namespace DiplomProject.Services.Builder
     {
         private readonly TypeResolver _typeResolver = new TypeResolver();
 
-        public string BuildPropertiesCode(CodeProperty property)
+        public string BuildPropertyCode(CodeProperty property)
         {
             ThreadHelper.ThrowIfNotOnUIThread();
+
             string type = _typeResolver.GetPropertyType(property);
-            bool isNullable = _typeResolver.IsNullableType(property);
-            string nonNullableType = isNullable ? type.TrimEnd('?') : type;
-
-            // Генерация getter
-            string getter = isNullable
-                ? $"get => _model?.{property.Name} ?? default({type});"
-                : (_typeResolver.IsValueType(property)
-                    ? $"get => _model?.{property.Name} ?? default({nonNullableType});"
-                    : $"get => _model?.{property.Name};");
-
-            // Генерация setter
-            string comparison = isNullable
-                ? $"!Nullable.Equals(_model.{property.Name}, value)"
-                : (_typeResolver.IsValueType(property)
-                    ? $"_model.{property.Name} != value"
-                    : $"!EqualityComparer<{type}>.Default.Equals(_model.{property.Name}, value)");
-
-            string assignment = isNullable
-                ? $"_model.{property.Name} = value.HasValue ? ({nonNullableType})value : default({nonNullableType}?)"
-                : $"_model.{property.Name} = value";
 
             return $@"
-public {type} {property.Name}
-{{
-    {getter}
-    set
-    {{
-        if (_model != null && {comparison})
+        private {type} _{property.Name.ToLower()};
+        public {type} {property.Name}
         {{
-            {assignment};
-            OnPropertyChanged();
+            get => _{property.Name.ToLower()};
+            set
+            {{
+                _{property.Name.ToLower()} = value;
+                OnPropertyChanged(nameof({property.Name}));
+            }}
         }}
-    }}
-}}";
+";
+        }
+
+        public string BuildPropertyDialogCode(CodeProperty property, CodeClass codeClass)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+
+            string type = _typeResolver.GetPropertyType(property);
+
+            return $@"
+        public {type} {property.Name}
+        {{
+            get => _item.{property.Name};
+            set
+            {{
+                _item.{property.Name} = value;
+                OnPropertyChanged(nameof({property.Name}));
+            }}
+        }}
+";
         }
     }
 }
