@@ -14,6 +14,7 @@ namespace DiplomProject.Services.Builder
     {
         private readonly TypeResolver _typeResolver = new TypeResolver();
 
+        #region Control
         public string BuildPropertyControl(CodeProperty property)
         {
             ThreadHelper.ThrowIfNotOnUIThread();
@@ -26,10 +27,31 @@ namespace DiplomProject.Services.Builder
         {
             ThreadHelper.ThrowIfNotOnUIThread();
             string label = $"<TextBlock Text=\"{property.Name}\" Margin=\"0,5,0,0\"/>";
-            string control = BuildControlByType(property, bindingMode: ", Mode=TwoWay");
+            string control = BuildControlByType(property, bindingMode: ", UpdateSourceTrigger=PropertyChanged");
             return $"{label}\n{control}";
         }
 
+        private string BuildControlByType(CodeProperty property, string bindingMode)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            var propType = _typeResolver.GetPropertyType(property).ToLower();
+            string margin = "Margin=\"0,5,0,0\"";
+            if (propType.Contains("bool"))
+            {
+                return $"<CheckBox IsChecked=\"{{Binding {property.Name}{bindingMode}}}\" {margin}/>";
+            }
+            if (propType.Contains("date"))
+            {
+                string additionalAttributes = "SelectedDateFormat=\"Short\"";
+
+                return $"<DatePicker SelectedDate=\"{{Binding {property.Name}{bindingMode}}}\" {additionalAttributes} {margin}/>";
+            }
+
+            return $"<TextBox Text=\"{{Binding {property.Name}{bindingMode}}}\" {margin}/>";
+        }
+        #endregion
+
+        #region Column
         public string BuildPropertyColumn(CodeProperty property)
         {
             ThreadHelper.ThrowIfNotOnUIThread();
@@ -51,24 +73,6 @@ namespace DiplomProject.Services.Builder
 
             return $"Header=\"{property.Name}\" Binding=\"{{Binding {property.Name}}}\" Width=\"Auto\"";
         }
-
-        private string BuildControlByType(CodeProperty property, string bindingMode)
-        {
-            ThreadHelper.ThrowIfNotOnUIThread();
-            var propType = _typeResolver.GetPropertyType(property).ToLower();
-            string margin = "Margin=\"0,5,0,0\"";
-            if (propType.Contains("bool"))
-            {
-                return $"<CheckBox IsChecked=\"{{Binding {property.Name}{bindingMode}}}\" {margin}/>";
-            }
-            if (propType.Contains("date"))
-            {
-                string additionalAttributes = "SelectedDateFormat=\"Short\"";
-
-                return $"<DatePicker SelectedDate=\"{{Binding {property.Name}{bindingMode}}}\" {additionalAttributes} {margin}/>";
-            }
-
-            return $"<TextBox Text=\"{{Binding {property.Name}{bindingMode}}}\" {margin}/>";
-        }
+        #endregion
     }
 }

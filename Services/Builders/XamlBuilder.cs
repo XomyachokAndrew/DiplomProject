@@ -37,6 +37,23 @@ namespace DiplomProject.Services.Builder
                 }
             }
 
+            columns.AppendLine($@"<DataGridTemplateColumn Width=""*"" Header=""Actions"">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <StackPanel Orientation=""Horizontal"">
+                                        <Button Content=""Edit"" 
+                                                Command=""{{Binding DataContext.EditCommand, RelativeSource={{RelativeSource AncestorType=DataGrid}}}}"" 
+                                                CommandParameter=""{{Binding}}"" 
+                                                Margin=""2"" Width=""60""/>
+                                        <Button Content=""Delete"" 
+                                                Command=""{{Binding DataContext.DeleteCommand, RelativeSource={{RelativeSource AncestorType=DataGrid}}}}"" 
+                                                CommandParameter=""{{Binding}}"" 
+                                                Margin=""2"" Width=""60""/>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>");
+
             return $@"<Window x:Class=""{namespaces["project"]}.Views.{codeClass.Name}View""
                     xmlns=""http://schemas.microsoft.com/winfx/2006/xaml/presentation""
                     xmlns:x=""http://schemas.microsoft.com/winfx/2006/xaml""
@@ -46,7 +63,21 @@ namespace DiplomProject.Services.Builder
                     mc:Ignorable=""d""
                     Title=""{codeClass.Name}View"" Height=""450"" Width=""800"">
                 <Grid>
-                    <DataGrid ItemsSource=""{{Binding Items}}"" AutoGenerateColumns=""False"" IsReadOnly=""True"">
+                    <Grid.RowDefinitions>
+                        <RowDefinition></RowDefinition>
+                        <RowDefinition></RowDefinition>
+                    </Grid.RowDefinitions>
+                    <StackPanel Grid.Row=""0"" Orientation=""Horizontal"" HorizontalAlignment=""Right"" Margin=""0,0,0,10"">
+                        <Button Content=""Add"" Command=""{{Binding AddCommand}}"" Width=""80"" Margin=""5,0""/>
+                        <Button Content=""Save"" Command=""{{Binding SaveCommand}}"" Width=""80"" Margin=""5,0""/>
+                    </StackPanel>
+                    <DataGrid 
+                        Grid.Row=""1""
+                        ItemsSource=""{{Binding Items}}"" 
+                        AutoGenerateColumns=""False"" 
+                        IsReadOnly=""True""
+                        SelectedItem=""{{Binding SelectedItem, Mode=TwoWay}}""
+                        >
                         <DataGrid.Columns>
                             {columns}
                         </DataGrid.Columns>
