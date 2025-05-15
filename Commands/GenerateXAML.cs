@@ -94,7 +94,7 @@ namespace DiplomProject
             {
                 Title = title,
                 Width = 400,
-                Height = 300,
+                Height = 400,
                 Content = new SelectionControl(),
                 WindowStartupLocation = WindowStartupLocation.CenterScreen,
             };
@@ -103,13 +103,46 @@ namespace DiplomProject
             {
                 control.OkClicked += (s, args) =>
                 {
-                    var xamlGenerator = new XamlGeneratorService(package);
-                    xamlGenerator.GenerateXaml(control.SelectedModel
-                        ,control.GenerateViewModel
-                         ,control.UseDataBinding
-                         //,control.AddValidation
-                         );
-                    dialog.Close();
+                    try
+                    {
+                        var xamlGenerator = new XamlGeneratorService(package);
+
+                        xamlGenerator.GenerateXaml(
+                            className: control.SelectedModel,
+                            isGenerateViewModel: control.GenerateViewModel,
+                            isUseDataBinding: control.UseDataBinding,
+                            isUseDatabase: control.UseDatabase,
+                            dbProvider: control.SelectedDbProvider,
+                            isAddingMethod: control.AddAdding,
+                            isEditingMethod: control.AddEditing,
+                            isDeletingMethod: control.AddDeleting
+                            );
+
+                        // Показываем сообщение об успехе
+                        VsShellUtilities.ShowMessageBox(
+                            package,
+                            "XAML generation completed successfully!",
+                            title,
+                            OLEMSGICON.OLEMSGICON_INFO,
+                            OLEMSGBUTTON.OLEMSGBUTTON_OK,
+                            OLEMSGDEFBUTTON.OLEMSGDEFBUTTON_FIRST);
+                    }
+                    catch (Exception ex)
+                    {
+                        // Обработка ошибок
+                        VsShellUtilities.ShowMessageBox(
+                            package,
+                            $"Error during generation: {ex.Message}",
+                            title,
+                            OLEMSGICON.OLEMSGICON_CRITICAL,
+                            OLEMSGBUTTON.OLEMSGBUTTON_OK,
+                            OLEMSGDEFBUTTON.OLEMSGDEFBUTTON_FIRST);
+                    }
+                    finally
+                    {
+                        dialog.Close();
+                    }
+                    
                 };
 
                 control.CancelClicked += (s, args) => dialog.Close();
