@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using EnvDTE;
 using Microsoft.VisualStudio.Shell;
@@ -8,25 +7,31 @@ namespace DiplomProject.Services.Resolver
 {
     public class DataSourceResolver
     {
-        public string GetAdditionalUsings(string jsonFilePath, string dbSetName)
+        public string GetAdditionalUsings(bool isUseDatabase, string dbProvider, Dictionary<string, string> namespaces)
         {
             var usings = new List<string>();
+            usings.Add("using CommunityToolkit.Mvvm.Input;");
 
-            if (!string.IsNullOrEmpty(jsonFilePath))
+            if (isUseDatabase)
             {
-                usings.Add("using System.Text.Json;");
-                usings.Add("using System.IO;");
+                switch (dbProvider)
+                {
+                    case "Json":
+                        usings.Add("using System.Text.Json;");
+                        usings.Add("using System.IO;");
+                        break;
+                    case "DbContext":
+                        usings.Add("using System.Data.Entity;");
+                        usings.Add($"using {namespaces["project"]}.Context");
+                        break;
+                    default:
+                        break;
+                }
             }
-
-            if (!string.IsNullOrEmpty(dbSetName))
-            {
-                usings.Add("using System.Data.Entity;");
-            }
-
             return string.Join("\n", usings);
         }
 
-        public string GetDbContextName(CodeClass modelClass, Dictionary<string, string> namespaces)
+        public string GetDbContextName(CodeClass modelClass)
         {
             ThreadHelper.ThrowIfNotOnUIThread();
             var project = modelClass.ProjectItem.ContainingProject;
