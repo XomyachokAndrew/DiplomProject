@@ -19,6 +19,38 @@ namespace DiplomProject.Services.Finders
             _dte = (DTE)Package.GetGlobalService(typeof(DTE));
         }
 
+        public string GetDbLoadItem(CodeClass codeClass, string dbProvider)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            string loadItems = null;
+            switch (dbProvider)
+            {
+                case "Json":
+                    loadItems = $@"if (File.Exists(JsonFilePath))
+            {{
+                try
+                {{
+                    string json = File.ReadAllText(JsonFilePath);
+                    var items = JsonSerializer.Deserialize<List<{codeClass.Name}>>(json);
+                    if (items != null)
+                        Items = new ObservableCollection<{codeClass.Name}>(items);
+                }}
+                catch (Exception ex)
+                {{
+                    Console.WriteLine($""Ошибка загрузки данных: {{ex.Message}}"");
+                }}
+            }}";
+                    break;
+                case "DbContext":
+                    loadItems = $@"_dbContext.{codeClass.Name}.Load(); // Загружаем данные в DbSet
+            Items = _dbContext.{codeClass.Name}.Local.ToObservableCollection();";
+                    break;
+                default:
+                    break;
+            }
+            return loadItems;
+        }
+
         public string FindJsonFile(string projectPath, string modelName)
         {
             string[] possibleFiles = {
@@ -63,6 +95,46 @@ namespace DiplomProject.Services.Finders
                 }
             }
             return null;
+        }
+
+        public string GetDbSaveChange(string dbProvider)
+        {
+            switch (dbProvider) 
+            {
+                case "Json":
+                    return $@"
+                var options = new JsonSerializerOptions {{WriteIndented = true}}; // Красивый формат JSON
+                string json = JsonSerializer.Serialize(Items, options);
+                File.WriteAllText(JsonFilePath, json);";
+                case "DbContext":
+                    return "_dbContext.SaveChanges();";
+                default:
+                    return null;
+            }
+        }
+
+        public void BuildDbUsingCode(CodeClass codeClass, bool isUseDatabase, string dbProvider, StringBuilder dbUsingCode)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+
+            if (isUseDatabase)
+            {
+                switch (dbProvider)
+                {
+                    case "Json":
+                        var dte = (DTE)Package.GetGlobalService(typeof(DTE));
+                        var selectedItem = dte.SelectedItems.Item(1).ProjectItem;
+                        string projectPath = Path.GetDirectoryName(selectedItem.ContainingProject.FullName);
+                        string jsonFilePath = FindJsonFile(projectPath, codeClass.Name);
+                        dbUsingCode.Append($@"private const string JsonFilePath = @""{jsonFilePath}"";");
+                        break;
+                    case "DbContext":
+                        dbUsingCode.Append("private readonly AppDbContext _dbContext = new AppDbContext();");
+                        break;
+                    default:
+                        break;
+                }
+            }
         }
     }
 }
