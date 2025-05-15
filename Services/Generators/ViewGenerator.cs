@@ -23,7 +23,13 @@ namespace DiplomProject.Services.Generators
             _messageService = new MessageService(package);
         }
 
-        public void GenerateViewFiles(CodeClass modelClass, ProjectItem targetProjectItem, bool isUseDataBinding)
+        public void GenerateViewFiles(
+            CodeClass modelClass,
+            ProjectItem targetProjectItem,
+            bool isUseDataBinding,
+            bool isAddingMethod,
+            bool isEditingMethod,
+            bool isDeletingMethod)
         {
             ThreadHelper.ThrowIfNotOnUIThread();
             try
@@ -37,7 +43,7 @@ namespace DiplomProject.Services.Generators
                 }
 
                 string viewName = $"{modelClass.Name}View";
-                var (xamlContent, csContent) = _xamlBuilder.BuildViewContent(modelClass, isUseDataBinding);
+                var (xamlContent, csContent) = _xamlBuilder.BuildViewContent(modelClass, isUseDataBinding, isAddingMethod, isEditingMethod, isDeletingMethod);
 
                 SaveAndAddToProject(
                     targetProjectItem,
@@ -48,16 +54,19 @@ namespace DiplomProject.Services.Generators
                     csContent,
                     "Views");
 
-                var (dialogXamlContent, dialogCsContent) = _dialogBuilder.BuildDialogContent(modelClass, isUseDataBinding);
+                if (isAddingMethod || isEditingMethod)
+                {
+                    var (dialogXamlContent, dialogCsContent) = _dialogBuilder.BuildDialogContent(modelClass, isUseDataBinding);
 
-                SaveAndAddToProject(
-                    targetProjectItem,
-                    viewsFolder,
-                    $"Dialog{viewName}.xaml",
-                    dialogXamlContent,
-                    $"Dialog{viewName}.xaml.cs",
-                    dialogCsContent,
-                    "Views");
+                    SaveAndAddToProject(
+                        targetProjectItem,
+                        viewsFolder,
+                        $"Dialog{viewName}.xaml",
+                        dialogXamlContent,
+                        $"Dialog{viewName}.xaml.cs",
+                        dialogCsContent,
+                        "Views");
+                }
 
                 _messageService.ShowSuccessMessage($"View for {modelClass.Name} successfully generated!");
             }

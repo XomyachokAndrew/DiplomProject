@@ -27,7 +27,14 @@ namespace DiplomProject.Services.Generators
             _messageService = new MessageService(package);
         }
 
-        public void GenerateViewModel(CodeClass modelClass, ProjectItem targetProjectItem, string jsonFilePath, string dbSetName)
+        public void GenerateViewModel(
+            CodeClass modelClass, 
+            ProjectItem targetProjectItem, 
+            bool isUseDatabase, 
+            string dbProvider, 
+            bool isAddingMethod, 
+            bool isEditingMethod, 
+            bool isDeletingMethod)
         {
             ThreadHelper.ThrowIfNotOnUIThread();
             try
@@ -40,17 +47,20 @@ namespace DiplomProject.Services.Generators
                     Directory.CreateDirectory(viewModelsFolder);
                 }
 
-                string viewModelContent = _viewModelBuilder.BuildViewModelContent(modelClass, jsonFilePath, dbSetName);
+                string viewModelContent = _viewModelBuilder.BuildViewModelContent(modelClass, isUseDatabase, dbProvider, isAddingMethod, isEditingMethod, isDeletingMethod);
                 string viewModelName = $"{modelClass.Name}ViewModel.cs";
                 string viewModelPath = Path.Combine(viewModelsFolder, viewModelName);
                 
                 SaveProjectAndPath(viewModelPath, viewModelContent, targetProjectItem);
 
-                string dialogViewModelContent = _dialogViewModelBuilder.BuildDialogViewModelContent(modelClass);
-                string dialogViewModelName = $"Dialog{modelClass.Name}ViewModel.cs";
-                string dialogViewModelPath = Path.Combine(viewModelsFolder, dialogViewModelName);
+                if (isAddingMethod || isEditingMethod)
+                {
+                    string dialogViewModelContent = _dialogViewModelBuilder.BuildDialogViewModelContent(modelClass);
+                    string dialogViewModelName = $"Dialog{modelClass.Name}ViewModel.cs";
+                    string dialogViewModelPath = Path.Combine(viewModelsFolder, dialogViewModelName);
 
-                SaveProjectAndPath(dialogViewModelPath, dialogViewModelContent, targetProjectItem);
+                    SaveProjectAndPath(dialogViewModelPath, dialogViewModelContent, targetProjectItem);
+                }
 
                 _messageService.ShowSuccessMessage($"ViewModel for {modelClass.Name} successfully generated!");
             }
