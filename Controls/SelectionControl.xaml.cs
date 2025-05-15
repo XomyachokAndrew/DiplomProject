@@ -23,8 +23,70 @@ namespace DiplomProject.Controls
 
             // Заполните ComboBox моделями данных
             LoadClasses();
+
+            DbProviderComboBox.SelectedIndex = 0; // Устанавливаем JSON по умолчанию
         }
 
+        public string SelectedModel => ModelComboBox.SelectedItem?.ToString();
+        public bool GenerateViewModel => GenerateViewModelCheckBox.IsChecked ?? false;
+        public bool UseDataBinding => UseDataBindingCheckBox.IsChecked ?? false;
+        public bool UseDatabase => UseDatabaseCheckBox.IsChecked ?? false;
+        public bool AddAdding => AddMethodAddingCheckBox.IsChecked ?? false;
+        public bool AddEditing => AddMethodEditCheckBox.IsChecked ?? false;
+        public bool AddDeleting => AddMethodDeleteCheckBox.IsChecked ?? false;
+
+        public string SelectedDbProvider
+        {
+            get
+            {
+                if (!UseDatabase)
+                    return null;
+
+                if (DbProviderComboBox.SelectedItem is ComboBoxItem selectedItem)
+                {
+                    return selectedItem.Tag.ToString();
+                }
+                return "Json"; // Значение по умолчанию
+            }
+        }
+
+        private void UseDatabaseCheckBox_Checked(object sender, RoutedEventArgs e)
+        {
+            DbProviderComboBox.IsEnabled = true;
+        }
+
+        private void UseDatabaseCheckBox_Unchecked(object sender, RoutedEventArgs e)
+        {
+            DbProviderComboBox.IsEnabled = false;
+        }
+
+        private void GenerateViewModelCheckBox_Checked(object sender, RoutedEventArgs e)
+        {
+            UseDataBindingCheckBox.IsEnabled = true;
+            AddMethodAddingCheckBox.IsEnabled = true;
+            AddMethodEditCheckBox.IsEnabled = true;
+            AddMethodDeleteCheckBox.IsEnabled = true;
+        }
+
+        private void GenerateViewModelCheckBox_Unchecked(object sender, RoutedEventArgs e)
+        {
+            UseDataBindingCheckBox.IsEnabled = false;
+            AddMethodAddingCheckBox.IsEnabled = false;
+            AddMethodDeleteCheckBox.IsEnabled = false;
+            AddMethodEditCheckBox.IsEnabled = false;
+        }
+
+        private void OkButton_Click(object sender, RoutedEventArgs e)
+        {
+            OkClicked?.Invoke(this, EventArgs.Empty);
+        }
+
+        private void CancelButton_Click(object sender, RoutedEventArgs e)
+        {
+            CancelClicked?.Invoke(this, EventArgs.Empty);
+        }
+
+        #region Model Class
         private void LoadClasses()
         {
             ThreadHelper.JoinableTaskFactory.Run(async () =>
@@ -64,21 +126,6 @@ namespace DiplomProject.Controls
                         out int buttonPressed);
                 }
             });
-        }
-
-        public string SelectedModel => ModelComboBox.SelectedItem?.ToString();
-        public bool GenerateViewModel => GenerateViewModelCheckBox.IsChecked ?? false;
-        public bool UseDataBinding => UseDataBindingCheckBox.IsChecked ?? false;
-        public bool AddValidation => AddValidationCheckBox.IsChecked ?? false;
-
-        private void OkButton_Click(object sender, RoutedEventArgs e)
-        {
-            OkClicked?.Invoke(this, EventArgs.Empty);
-        }
-
-        private void CancelButton_Click(object sender, RoutedEventArgs e)
-        {
-            CancelClicked?.Invoke(this, EventArgs.Empty);
         }
 
         private List<string> GetAllModelClasses()
@@ -155,5 +202,7 @@ namespace DiplomProject.Controls
                 }
             }
         }
+
+        #endregion
     }
 }

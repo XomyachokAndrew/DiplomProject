@@ -6,8 +6,10 @@
              xmlns:local="clr-namespace:DiplomProject.Controls"
              mc:Ignorable="d" 
              d:DesignHeight="450" d:DesignWidth="800">
-    <Grid Margin="10">
+    <Grid Margin="10" Background="AliceBlue">
         <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
@@ -16,16 +18,24 @@
         </Grid.RowDefinitions>
 
         <Label Grid.Row="0" Content="Выберите модель:"/>
-        <ComboBox Grid.Row="1" Name="ModelComboBox" Margin="0,5,0,10"/>
+        <ComboBox Grid.Row="1" Name="ModelComboBox" Margin="20,5,20,10"/>
 
-        <Label Grid.Row="2" Content="Options:"/>
-        <StackPanel Grid.Row="3" Margin="0,5,0,10">
-            <CheckBox Name="GenerateViewModelCheckBox" Content="Создание ViewModel" Margin="0,2"/>
-            <CheckBox Name="UseDataBindingCheckBox" Content="Используйте привязку данных" Margin="0,2"/>
-            <CheckBox Name="AddValidationCheckBox" Content="Добавить проверку" Margin="0,2"/>
+        <CheckBox Grid.Row="2" Name="UseDatabaseCheckBox" Content="Использовать БД" Margin="0,5,0,0" Checked="UseDatabaseCheckBox_Checked" Unchecked="UseDatabaseCheckBox_Unchecked"/>
+        <ComboBox Grid.Row="3" Name="DbProviderComboBox" Margin="20,5,20,10" IsEnabled="False">
+            <ComboBoxItem Tag="Json">JSON</ComboBoxItem>
+            <ComboBoxItem Tag="DbContext">Entity Framework (DbContext)</ComboBoxItem>
+        </ComboBox>
+
+        <Label Grid.Row="4" Content="Options:"/>
+        <StackPanel Grid.Row="5" Margin="0,5,0,10">
+            <CheckBox Name="GenerateViewModelCheckBox" Content="Создание ViewModel" Margin="0,2" Checked="GenerateViewModelCheckBox_Checked" Unchecked="GenerateViewModelCheckBox_Unchecked"/>
+            <CheckBox Name="UseDataBindingCheckBox" Content="Используйте привязку данных" Margin="0,2" IsEnabled="False"/>
+            <CheckBox Name="AddMethodAddingCheckBox" Content="Добавить метод добавления" Margin="0,2" IsEnabled="False"/>
+            <CheckBox Name="AddMethodEditCheckBox" Content="Добавить метод изменения" Margin="0,2" IsEnabled="False"/>
+            <CheckBox Name="AddMethodDeleteCheckBox" Content="Добавить метод удаления" Margin="0,2" IsEnabled="False"/>
         </StackPanel>
 
-        <StackPanel Grid.Row="4" Orientation="Horizontal" HorizontalAlignment="Right">
+        <StackPanel Grid.Row="6" Orientation="Horizontal" HorizontalAlignment="Right">
             <Button Name="OkButton" Content="Ок" Width="80" Margin="0,0,10,0" Click="OkButton_Click"/>
             <Button Name="CancelButton" Content="Отмена" Width="80" Click="CancelButton_Click"/>
         </StackPanel>

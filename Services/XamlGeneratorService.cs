@@ -24,7 +24,16 @@ namespace DiplomProject.Services
             _messageService = new MessageService(package);
         }
 
-        public void GenerateXaml(string className, bool isGenerateViewModel, bool isUseDataBinding)
+        public void GenerateXaml(
+            string className, 
+            bool isGenerateViewModel, 
+            bool isUseDataBinding, 
+            bool isUseDatabase, 
+            string dbProvider,
+            bool isAddingMethod,
+            bool isEditingMethod,
+            bool isDeletingMethod
+            ) 
         {
             ThreadHelper.ThrowIfNotOnUIThread();
             try
@@ -35,16 +44,17 @@ namespace DiplomProject.Services
                 var codeClassfinder = new CodeClassFinder();
                 var codeClass = codeClassfinder.FindClassByName(className) ?? throw new Exception($"Class {className} not found");
                 
-                _viewGenerator.GenerateViewFiles(codeClass, selectedItem, isUseDataBinding);
+                _viewGenerator.GenerateViewFiles(
+                    codeClass, 
+                    selectedItem, 
+                    isUseDataBinding, 
+                    isAddingMethod, 
+                    isEditingMethod, 
+                    isDeletingMethod);
 
                 if (isGenerateViewModel)
                 {
-                    // Находим источник данных
-                    string projectPath = Path.GetDirectoryName(selectedItem.ContainingProject.FullName);
-                    string jsonFilePath = _dataSourceFinder.FindJsonFile(projectPath, className);
-                    string dbSetName = string.IsNullOrEmpty(jsonFilePath) ? _dataSourceFinder.FindDbSetName(codeClass, projectPath) : null;
-
-                    _viewModelGenerator.GenerateViewModel(codeClass, selectedItem, jsonFilePath, dbSetName);
+                    _viewModelGenerator.GenerateViewModel(codeClass, selectedItem, isUseDatabase, dbProvider, isAddingMethod, isEditingMethod, isDeletingMethod);
                 }
 
                 _messageService.ShowSuccessMessage($"XAML for {className} successfully generated!");
