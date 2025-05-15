@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using DiplomProject.Services.Resolver;
 using EnvDTE;
 using Microsoft.VisualStudio.Shell;
 
@@ -10,6 +11,8 @@ namespace DiplomProject.Services.Builder
 {
     public class CommandCodeBuilder
     {
+        private readonly DataSourceResolver _dataSourceResolver = new DataSourceResolver();
+
         public string BuildCommandCode(CodeFunction function)
         {
             ThreadHelper.ThrowIfNotOnUIThread();
@@ -18,14 +21,14 @@ namespace DiplomProject.Services.Builder
             return $@"
         public ICommand {commandName} {{ get; }}
     
-        private void Execute{function.Name}(object parameter)
+        private void Execute{function.Name}()
         {{
-            _model?.{function.Name}({GetMethodParameters(function)});
+            _items?.{function.Name}({GetMethodParameters(function)});
         }}
     
-        private bool CanExecute{function.Name}(object parameter)
+        private bool CanExecute{function.Name}()
         {{
-            return _model != null;
+            return _items != null;
         }}";
         }
 
@@ -41,7 +44,7 @@ namespace DiplomProject.Services.Builder
                 })
                 .Select(f =>
                 {
-                    ThreadHelper.ThrowIfNotOnUIThread();
+                    Microsoft.VisualStudio.Shell.ThreadHelper.ThrowIfNotOnUIThread();
                     return $"{f.Name}Command = new RelayCommand(Execute{f.Name}, CanExecute{f.Name})";
                 });
 
@@ -51,16 +54,14 @@ namespace DiplomProject.Services.Builder
         private string GetMethodParameters(CodeFunction function)
         {
             ThreadHelper.ThrowIfNotOnUIThread();
-            var parameters = function.Parameters.OfType<CodeParameter>()
-                .Select(p =>
-                {
-                    ThreadHelper.ThrowIfNotOnUIThread();
-                    return $"({p.Type.AsString})parameter";
-                });
+            var parameters = new List<string>();
+            foreach (CodeParameter p in function.Parameters)
+            {
+                ThreadHelper.ThrowIfNotOnUIThread();
+                parameters.Add($"default({p.Type.AsString})");
+            }
 
-            return function.Parameters.Count > 0
-                ? string.Join(", ", parameters)
-                : string.Empty;
+            return string.Join(", ", parameters);
         }
     }
 }
