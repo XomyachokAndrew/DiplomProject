@@ -106,7 +106,7 @@ namespace {namespaces["project"]}.ViewModels
             {
                 if (member is CodeProperty property)
                 {
-                    propertyCode.AppendLine(_propertyCodeBuilder.BuildPropertyDialogCode(property, codeClass));
+                    propertyCode.AppendLine(_propertyCodeBuilder.BuildPropertyDialogCode(property));
                 }
             }
         }

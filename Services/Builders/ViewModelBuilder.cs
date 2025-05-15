@@ -1,96 +1,79 @@
 ﻿using System.Collections.Generic;
 using System.Text;
+using DiplomProject.Services.Finders;
 using DiplomProject.Services.Resolver;
 using EnvDTE;
 using Microsoft.VisualStudio.Shell;
-using System.Threading.Tasks;
-using System;
-using EnvDTE80;
 
 namespace DiplomProject.Services.Builder
 {
     public class ViewModelBuilder
     {
         private readonly NamespaceResolver _namespaceResolver = new NamespaceResolver();
-        private readonly PropertyCodeBuilder _propertyCodeBuilder = new PropertyCodeBuilder();
         private readonly DataSourceResolver _dataSourceResolver = new DataSourceResolver();
+        private readonly DataSourceFinder _dataSourceFinder = new DataSourceFinder();
 
-        public string BuildViewModelContent(CodeClass modelClass, string jsonFilePath = null, string dbSetName = null)
+        public string BuildViewModelContent(
+            CodeClass modelClass, 
+            bool isUseDatabase, 
+            string dbProvider, 
+            bool isAddingMethod, 
+            bool isEditingMethod, 
+            bool isDeletingMethod)
         {
             ThreadHelper.ThrowIfNotOnUIThread();
             var namespaces = _namespaceResolver.GetProjectNamespace(modelClass);
 
-            var propertyCode = new StringBuilder();
             var editItemCode = new StringBuilder();
             var addItemCode = new StringBuilder();
+            var deleteItemCode = new StringBuilder();
             var initializationCode = new StringBuilder();
             var saveChangesCode = new StringBuilder();
+            var dbUsingCode = new StringBuilder();
+            var usingsCode = new StringBuilder();
 
-            string additionalUsings = _dataSourceResolver.GetAdditionalUsings(jsonFilePath, dbSetName);
+            BuildInitializationCode(modelClass, initializationCode, isUseDatabase, dbProvider);
+            BuildEdit(isEditingMethod, modelClass, editItemCode);
+            BuildAdd(isAddingMethod, modelClass, addItemCode);
+            BuildDelete(isDeletingMethod, deleteItemCode);
+            BuildSaveChanges(isUseDatabase, dbProvider, saveChangesCode);
+            BuildUsingsContent(namespaces, isUseDatabase, dbProvider, usingsCode);
+            _dataSourceFinder.BuildDbUsingCode(modelClass, isUseDatabase, dbProvider, dbUsingCode);
 
-            if (!additionalUsings.Contains("CommunityToolkit.Mvvm.Input"))
-            {
-                additionalUsings += "\nusing CommunityToolkit.Mvvm.Input;";
-            }
-            if (!string.IsNullOrEmpty(dbSetName))
-            {
-                additionalUsings += $"\nusing {namespaces["project"]}.Context";
-            }
-
-            BuildInitializationCode(modelClass, initializationCode, jsonFilePath, dbSetName, namespaces);
-            BuildProperty(modelClass, propertyCode);
-            BuildEdit(modelClass, editItemCode);
-            BuildAdd(modelClass, addItemCode);
-            if (jsonFilePath != null || dbSetName != null)
-            {
-                BuildSaveChanges(modelClass, jsonFilePath, dbSetName, namespaces, saveChangesCode);
-            }
-
-            var viewModelContent = BuildViewModelContent(modelClass,
-                                                     namespaces,
-                                                     additionalUsings,
-                                                     propertyCode,
-                                                     editItemCode,
-                                                     addItemCode,
-                                                     initializationCode,
-                                                     saveChangesCode,
-                                                     jsonFilePath,
-                                                     dbSetName);
+            var viewModelContent = BuildViewModelContent(
+                modelClass,
+                namespaces,
+                editItemCode,
+                addItemCode,
+                deleteItemCode,
+                initializationCode,
+                saveChangesCode,
+                dbUsingCode,
+                usingsCode
+                );
             return viewModelContent;
         }
 
         public string BuildViewModelContent(
             CodeClass codeClass,
             Dictionary<string, string> namespaces,
-            string additionalUsings,
-            StringBuilder propertyCode,
             StringBuilder editItemCode,
             StringBuilder addItemCode,
+            StringBuilder deleteItemCode,
             StringBuilder initializationCode,
             StringBuilder saveChangesCode,
-            string jsonFilePath = null,
-            string dbSetName = null)
+            StringBuilder dbUsingCode,
+            StringBuilder usingsCode)
         {
             ThreadHelper.ThrowIfNotOnUIThread();
-            return $@"using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Linq;
-using System.Runtime.CompilerServices;
-using System.Windows.Input;
-using System.Collections.ObjectModel;
-using System.Windows;
-using {namespaces["project"]}.Views;
-{additionalUsings}
-using {namespaces["model"]};
+            return $@"{usingsCode}
 
 namespace {namespaces["project"]}.ViewModels
 {{
     public class {codeClass.Name}ViewModel : INotifyPropertyChanged
     {{
         public event PropertyChangedEventHandler? PropertyChanged;
-        {(jsonFilePath != null ? $@"private const string JsonFilePath = @""{jsonFilePath}"";" : string.Empty)}
-        {(dbSetName != null ? "private readonly AppDbContext _dbContext = new AppDbContext();" : string.Empty)}
+        {dbUsingCode}
 
         // **Свойства для привязки в UI**
         private ObservableCollection<{codeClass.Name}> _items = new();
@@ -117,25 +100,25 @@ namespace {namespaces["project"]}.ViewModels
             }}
         }}
 
-        // **Свойства для формы добавления/редактирования**
-        {propertyCode}
-
         // **Команды**
         public IRelayCommand AddCommand {{ get; }}
         public IRelayCommand EditCommand {{ get; }}
         public IRelayCommand DeleteCommand {{ get; }}
-        {(!string.IsNullOrEmpty(saveChangesCode.ToString()) ? "public IRelayCommand SaveCommand { get; }" : string.Empty)}
+        public IRelayCommand SaveCommand {{ get; }}
 
         public {codeClass.Name}ViewModel()
         {{
-            {(dbSetName != null || jsonFilePath != null ? "LoadItems();" : string.Empty)}
+            LoadItems();
             AddCommand = new RelayCommand(AddItem);
             EditCommand = new RelayCommand(EditItem, () => SelectedItem != null);
             DeleteCommand = new RelayCommand(DeleteItem, () => SelectedItem != null);
-            {(!string.IsNullOrEmpty(saveChangesCode.ToString()) ? "SaveCommand = new RelayCommand(SaveChanges);" : string.Empty)}
+            SaveCommand = new RelayCommand(SaveChanges);
         }}
 
-        {initializationCode}
+        private void LoadItems() 
+        {{
+            {initializationCode}
+        }}
 
         private void AddItem()
         {{
@@ -149,22 +132,13 @@ namespace {namespaces["project"]}.ViewModels
 
         private void DeleteItem()
         {{
-            if (SelectedItem != null && MessageBox.Show(""Delete this item?"", ""Confirm"", 
-                MessageBoxButton.YesNo) == MessageBoxResult.Yes)
-            {{
-                Items.Remove(SelectedItem);
-                SaveChanges();
-            }}
-            /*
-            if (SelectedItem != null)
-            {{
-                Items.Remove(SelectedItem);
-                SelectedItem = null;
-            }}
-            */
+            {deleteItemCode}
         }}
 
-        {saveChangesCode}
+        private void SaveChanges()
+        {{
+            {saveChangesCode}
+        }}
 
         protected void OnPropertyChanged(string propertyName) =>
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
@@ -172,40 +146,37 @@ namespace {namespaces["project"]}.ViewModels
 }}";
         }
 
-        private void BuildProperty(CodeClass codeClass, StringBuilder propertyCode)
+        private void BuildEdit(bool isEdit, CodeClass codeClass, StringBuilder editItemCode)
         {
             ThreadHelper.ThrowIfNotOnUIThread();
 
-            foreach (CodeElement member in codeClass.Members)
+            if (!isEdit)
             {
-                if (member is CodeProperty property)
-                {
-                    propertyCode.AppendLine(_propertyCodeBuilder.BuildPropertyCode(property));
-                }
+                editItemCode.Append("throw new NotImplementedException();");
             }
-        }
+            else
+            {
+                var itemProperty = new StringBuilder();
 
-        private void BuildEdit(CodeClass codeClass, StringBuilder editItemCode)
-        {
-            var itemProp = new StringBuilder();
-            ThreadHelper.ThrowIfNotOnUIThread();
-            foreach (CodeElement member in codeClass.Members)
-            {
-                if (member is CodeProperty property)
+                foreach (CodeElement member in codeClass.Members)
                 {
-                    itemProp.AppendLine($@"SelectedItem.{property.Name} = updatedItem.{property.Name};");
+                    if (member is CodeProperty property)
+                    {
+                        itemProperty.AppendLine($@"{property.Name} = SelectedItem.{property.Name},");
+                    }
                 }
-            }
-            var itemProperty = new StringBuilder();
-            foreach (CodeElement member in codeClass.Members)
-            {
-                if (member is CodeProperty property)
+
+                var itemProp = new StringBuilder();
+
+                foreach (CodeElement member in codeClass.Members)
                 {
-                    itemProperty.AppendLine($@"{property.Name} = SelectedItem.{property.Name},");
+                    if (member is CodeProperty property)
+                    {
+                        itemProp.AppendLine($@"SelectedItem.{property.Name} = updatedItem.{property.Name};");
+                    }
                 }
-            }
-            
-            editItemCode.AppendLine($@"
+
+                editItemCode.AppendLine($@"
             if (SelectedItem != null)
             {{
                 var itemCopy = new {codeClass.Name}
@@ -231,26 +202,34 @@ namespace {namespaces["project"]}.ViewModels
                 OnPropertyChanged(nameof(Items)); // Обновляем список
             }}
 ");
+            }
         }
 
-        private void BuildAdd(CodeClass codeClass, StringBuilder addItemCode)
+        private void BuildAdd(bool isAdd, CodeClass codeClass, StringBuilder addItemCode)
         {
-            var itemProp = new StringBuilder();
-            var clearProp = new StringBuilder();
-
             ThreadHelper.ThrowIfNotOnUIThread();
-            foreach (CodeElement member in codeClass.Members)
+
+            if (!isAdd)
             {
-                if (member is CodeProperty property)
+                addItemCode.Append("throw new NotImplementedException();");
+            }
+            else
+            {
+                var itemProp = new StringBuilder();
+                var clearProp = new StringBuilder();
+
+                foreach (CodeElement member in codeClass.Members)
                 {
-                    if (property.Name != "Id")
+                    if (member is CodeProperty property)
                     {
-                        itemProp.AppendLine($@"{property.Name} = New{property.Name},");
+                        if (property.Name != "Id")
+                        {
+                            itemProp.AppendLine($@"{property.Name} = New{property.Name},");
+                        }
                     }
                 }
-            }
 
-            addItemCode.AppendLine($@"
+                addItemCode.AppendLine($@"
             var dialogVm = new Dialog{codeClass.Name}ViewModel(title: ""Add New {codeClass.Name}"");
             var dialog = new Dialog{codeClass.Name}View
             {{
@@ -267,94 +246,81 @@ namespace {namespaces["project"]}.ViewModels
                 Items.Add(newItem);
                 SaveChanges();
             }}
-
-            /*
-            var item = new {codeClass.Name}
-            {{
-                Id = Items.Count() + 1,
-                {itemProp}
-            }};
-            Items.Add(item);
-            */
 ");
+            }
         }
 
-        private void BuildSaveChanges(CodeClass modelClass, string jsonFilePath, string dbSetName, Dictionary<string, string> namespaces, StringBuilder saveChanges)
+        private void BuildDelete(bool isDelete, StringBuilder deleteItemCode)
+        {
+            if (!isDelete)
+            {
+                deleteItemCode.Append("throw new NotImplementedException();");
+            }
+            else
+            {
+                deleteItemCode.AppendLine($@"if (SelectedItem != null && MessageBox.Show(""Delete this item?"", ""Confirm"", 
+                MessageBoxButton.YesNo) == MessageBoxResult.Yes)
+            {{
+                Items.Remove(SelectedItem);
+                SaveChanges();
+            }}");
+            }
+        }
+
+        private void BuildSaveChanges(bool isUseDatabase, string dbProvider, StringBuilder saveChanges)
         {
             ThreadHelper.ThrowIfNotOnUIThread();
-            saveChanges.AppendLine($@"private void SaveChanges()
-        {{
+            if (!isUseDatabase)
+            {
+                saveChanges.AppendLine("throw new NotImplementedException();");
+            }
+            else
+            {
+                string dbSaveChange = _dataSourceFinder.GetDbSaveChange(dbProvider);
+                saveChanges.AppendLine($@"
             try
             {{
-
-                {(jsonFilePath != null ? SaveToJson(modelClass) :
-                dbSetName != null ? SaveToDatabase(modelClass, namespaces) : "")}
+                {dbSaveChange}
             }}
             catch (Exception ex)
             {{
                 System.Diagnostics.Debug.WriteLine($""Error saving changes: {{ex.Message}}"");
-            }}
-        }}");
+            }}");
+            }
         }
 
-        private string SaveToJson(CodeClass codeClass)
+        private void BuildUsingsContent(Dictionary<string, string> namespaces, bool isUseDatabase, string dbProvider, StringBuilder usings)
         {
-            ThreadHelper.ThrowIfNotOnUIThread();
-            return $@"
-            var options = new JsonSerializerOptions {{WriteIndented = true}}; // Красивый формат JSON
-            string json = JsonSerializer.Serialize(Items, options);
-            File.WriteAllText(JsonFilePath, json);";
-        }
+            string additionalUsings = _dataSourceResolver.GetAdditionalUsings(isUseDatabase, dbProvider, namespaces);
 
-        private string SaveToDatabase(CodeClass modelClass, Dictionary<string, string> namespaces)
-        {
-            string dbContextName = _dataSourceResolver.GetDbContextName(modelClass, namespaces);
-            return $@"_dbContext.SaveChanges();";
+            usings.AppendLine($@"using System;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.Linq;
+using System.Runtime.CompilerServices;
+using System.Windows.Input;
+using System.Collections.ObjectModel;
+using System.Windows;
+using {namespaces["project"]}.Views;
+{additionalUsings}
+using {namespaces["model"]};");
         }
 
         private void BuildInitializationCode(
             CodeClass modelClass,
             StringBuilder initializationCode,
-            string jsonFilePath,
-            string dbSetName,
-            Dictionary<string, string> namespaces)
+            bool isUseDatabase,
+            string dbProvider)
         {
             ThreadHelper.ThrowIfNotOnUIThread();
-            if (!string.IsNullOrEmpty(jsonFilePath))
+            if (isUseDatabase)
             {
-                initializationCode.AppendLine($@"
-        private void LoadItems() 
-        {{
-            if (File.Exists(JsonFilePath))
-            {{
-                try
-                {{
-                    string json = File.ReadAllText(JsonFilePath);
-                    var items = JsonSerializer.Deserialize<List<{modelClass.Name}>>(json);
-                    if (items != null)
-                        Items = new ObservableCollection<{modelClass.Name}>(items);
-                }}
-                catch (Exception ex)
-                {{
-                    Console.WriteLine($""Ошибка загрузки данных: {{ex.Message}}"");
-                }}
-            }}
-        }}");
+                var loadItems = _dataSourceFinder.GetDbLoadItem(modelClass, dbProvider);
+                initializationCode.AppendLine(loadItems.ToString());
             }
-            else if (!string.IsNullOrEmpty(dbSetName))
+            else
             {
-                string dbContextName = _dataSourceResolver.GetDbContextName(modelClass, namespaces);
-                initializationCode.AppendLine($@"
-        private void LoadItems() 
-        {{
-            _dbContext.{modelClass.Name}.Load(); // Загружаем данные в DbSet
-            Items = _dbContext.{modelClass.Name}.Local.ToObservableCollection();
-        }}
-            // Загрузка данных из БД
-            using (var db = new {dbContextName}())
-            {{
-                Items = db.{dbSetName}.ToList() ?? new List<{modelClass.Name}>();
-            }}");
+                initializationCode.AppendLine("throw new NotImplementedException();");
             }
         }
     }

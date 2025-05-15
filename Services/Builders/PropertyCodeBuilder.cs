@@ -28,7 +28,7 @@ namespace DiplomProject.Services.Builder
 ";
         }
 
-        public string BuildPropertyDialogCode(CodeProperty property, CodeClass codeClass)
+        public string BuildPropertyDialogCode(CodeProperty property)
         {
             ThreadHelper.ThrowIfNotOnUIThread();
 

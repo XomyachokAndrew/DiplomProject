@@ -2,7 +2,6 @@
 using System.Text;
 using DiplomProject.Services.Resolver;
 using EnvDTE;
-using EnvDTE80;
 using Microsoft.VisualStudio.Shell;
 
 namespace DiplomProject.Services.Builder
@@ -12,18 +11,29 @@ namespace DiplomProject.Services.Builder
         private readonly NamespaceResolver _namespaceResolver = new NamespaceResolver();
         private readonly PropertyControlBuilder _propertyControlBuilder = new PropertyControlBuilder();
 
-        public (string xamlContent, string csContent) BuildViewContent(CodeClass codeClass, bool isUseDataBinding)
+        public (string xamlContent, string csContent) BuildViewContent(
+            CodeClass codeClass, 
+            bool isUseDataBinding, 
+            bool isAddingMethod, 
+            bool isEditingMethod, 
+            bool isDeletingMethod)
         {
             ThreadHelper.ThrowIfNotOnUIThread();
             var namespaces = _namespaceResolver.GetProjectNamespace(codeClass);
 
-            string xamlContent = BuildXamlContent(codeClass, isUseDataBinding, namespaces);
+            string xamlContent = BuildXamlContent(codeClass, isUseDataBinding, namespaces, isAddingMethod, isEditingMethod, isDeletingMethod);
             string csContent = BuildCsForXamlContent(codeClass, isUseDataBinding, namespaces);
 
             return (xamlContent, csContent);
         }
 
-        private string BuildXamlContent(CodeClass codeClass, bool isUseDataBinding, Dictionary<string, string> namespaces)
+        private string BuildXamlContent(
+            CodeClass codeClass, 
+            bool isUseDataBinding, 
+            Dictionary<string, string> namespaces, 
+            bool isAddingButton, 
+            bool isEditingButton, 
+            bool isDeletingButton)
         {
             ThreadHelper.ThrowIfNotOnUIThread();
             var columns = new StringBuilder();
@@ -37,22 +47,31 @@ namespace DiplomProject.Services.Builder
                 }
             }
 
-            columns.AppendLine($@"<DataGridTemplateColumn Width=""*"" Header=""Actions"">
+            var editButton = isEditingButton ? (isUseDataBinding ? $@"<Button Content=""Edit"" 
+                                                Command=""{{Binding DataContext.EditCommand, RelativeSource={{RelativeSource AncestorType=DataGrid}}}}"" 
+                                                CommandParameter=""{{Binding}}"" 
+                                                Margin=""2"" Width=""60""/>" : $@"<Button Content=""Edit"" Margin=""2"" Width=""60""/>") : "";
+            var deleteButton = isDeletingButton ? (isUseDataBinding ? $@"<Button Content=""Delete"" 
+                                                Command=""{{Binding DataContext.DeleteCommand, RelativeSource={{RelativeSource AncestorType=DataGrid}}}}"" 
+                                                CommandParameter=""{{Binding}}"" 
+                                                Margin=""2"" Width=""60""/>" : $@"<Button Content=""Delete"" Margin=""2"" Width=""60""/>") : "";
+
+            var addButton = isAddingButton ? (isUseDataBinding ? $@"<Button Content=""Add"" Command=""{{Binding AddCommand}}"" Width=""80"" Margin=""5,0""/>"
+                : $@"<Button Content=""Add"" Width=""80"" Margin=""5,0""/>") : "";
+
+            if (isEditingButton || isDeletingButton)
+            {
+                columns.AppendLine($@"<DataGridTemplateColumn Width=""*"" Header=""Actions"">
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate>
                                     <StackPanel Orientation=""Horizontal"">
-                                        <Button Content=""Edit"" 
-                                                Command=""{{Binding DataContext.EditCommand, RelativeSource={{RelativeSource AncestorType=DataGrid}}}}"" 
-                                                CommandParameter=""{{Binding}}"" 
-                                                Margin=""2"" Width=""60""/>
-                                        <Button Content=""Delete"" 
-                                                Command=""{{Binding DataContext.DeleteCommand, RelativeSource={{RelativeSource AncestorType=DataGrid}}}}"" 
-                                                CommandParameter=""{{Binding}}"" 
-                                                Margin=""2"" Width=""60""/>
+                                        {editButton}
+                                        {deleteButton}
                                     </StackPanel>
                                 </DataTemplate>
                             </DataGridTemplateColumn.CellTemplate>
                         </DataGridTemplateColumn>");
+            }
 
             return $@"<Window x:Class=""{namespaces["project"]}.Views.{codeClass.Name}View""
                     xmlns=""http://schemas.microsoft.com/winfx/2006/xaml/presentation""
@@ -63,20 +82,19 @@ namespace DiplomProject.Services.Builder
                     mc:Ignorable=""d""
                     Title=""{codeClass.Name}View"" Height=""450"" Width=""800"">
                 <Grid>
-                    <Grid.RowDefinitions>
+                    {(!string.IsNullOrEmpty(addButton) ? $@"<Grid.RowDefinitions>
                         <RowDefinition></RowDefinition>
                         <RowDefinition></RowDefinition>
                     </Grid.RowDefinitions>
                     <StackPanel Grid.Row=""0"" Orientation=""Horizontal"" HorizontalAlignment=""Right"" Margin=""0,0,0,10"">
-                        <Button Content=""Add"" Command=""{{Binding AddCommand}}"" Width=""80"" Margin=""5,0""/>
-                        <Button Content=""Save"" Command=""{{Binding SaveCommand}}"" Width=""80"" Margin=""5,0""/>
-                    </StackPanel>
+                        {addButton}
+                    </StackPanel>" : "")}
                     <DataGrid 
-                        Grid.Row=""1""
-                        ItemsSource=""{{Binding Items}}"" 
+                        {(!string.IsNullOrEmpty(addButton) ? @"Grid.Row=""1""" : "")}
+                        {(isUseDataBinding ? $@"ItemsSource=""{{Binding Items}}"" 
+                        SelectedItem=""{{Binding SelectedItem, Mode=TwoWay}}""" : "")}
                         AutoGenerateColumns=""False"" 
                         IsReadOnly=""True""
-                        SelectedItem=""{{Binding SelectedItem, Mode=TwoWay}}""
                         >
                         <DataGrid.Columns>
                             {columns}

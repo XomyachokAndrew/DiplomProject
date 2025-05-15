@@ -55,22 +55,25 @@ namespace DiplomProject.Services.Builder
         public string BuildPropertyColumn(CodeProperty property)
         {
             ThreadHelper.ThrowIfNotOnUIThread();
-            var dataColumn = BuildColumnByType(property, ", Mode=TwoWay");
+            var dataColumn = BuildColumnByType(property, false);
             return $@"<DataGridTextColumn {dataColumn}/>";
         }
 
         public string BuildDataBoundPropertyColumn(CodeProperty property)
         {
             ThreadHelper.ThrowIfNotOnUIThread();
-            var dataColumn = BuildColumnByType(property, ", Mode=TwoWay");
+            var dataColumn = BuildColumnByType(property, true);
             return $@"<DataGridTextColumn {dataColumn}/>";
         }
 
-        private string BuildColumnByType(CodeProperty property, string bindingMode)
+        private string BuildColumnByType(CodeProperty property, bool isBindingMode)
         {
             ThreadHelper.ThrowIfNotOnUIThread();
-            var propType = _typeResolver.GetPropertyType(property).ToLower();
 
+            if (!isBindingMode)
+            {
+                return $"Header=\"{property.Name}\" Width=\"Auto\"";
+            }
             return $"Header=\"{property.Name}\" Binding=\"{{Binding {property.Name}}}\" Width=\"Auto\"";
         }
         #endregion
