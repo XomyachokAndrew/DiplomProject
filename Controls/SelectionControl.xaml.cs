@@ -31,9 +31,13 @@ namespace DiplomProject.Controls
         public bool GenerateViewModel => GenerateViewModelCheckBox.IsChecked ?? false;
         public bool UseDataBinding => UseDataBindingCheckBox.IsChecked ?? false;
         public bool UseDatabase => UseDatabaseCheckBox.IsChecked ?? false;
-        public bool AddAdding => AddMethodAddingCheckBox.IsChecked ?? false;
-        public bool AddEditing => AddMethodEditCheckBox.IsChecked ?? false;
-        public bool AddDeleting => AddMethodDeleteCheckBox.IsChecked ?? false;
+        public bool AddAddingMethod => AddMethodAddingCheckBox.IsChecked ?? false;
+        public bool AddAddingButton => AddButtonAddingCheckBox.IsChecked ?? false;
+        public bool AddEditingMethod => AddMethodEditCheckBox.IsChecked ?? false;
+        public bool AddEditingButton => AddButtonEditCheckBox.IsChecked ?? false;
+        public bool AddDeletingMethod => AddMethodDeleteCheckBox.IsChecked ?? false;
+        public bool AddDeletingButton => AddButtonDeleteCheckBox.IsChecked ?? false;
+        public bool AddDialog => AddDialogCheckBox.IsChecked ?? false;
 
         public string SelectedDbProvider
         {
@@ -100,7 +104,10 @@ namespace DiplomProject.Controls
 
                     foreach (var className in classes)
                     {
-                        ModelComboBox.Items.Add(className);
+                        if (!className.Contains("App") || !className.Contains("View"))
+                        {
+                            ModelComboBox.Items.Add(className);
+                        }
                     }
 
                     if (ModelComboBox.Items.Count > 0)

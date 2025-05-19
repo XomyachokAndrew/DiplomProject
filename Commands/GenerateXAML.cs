@@ -113,9 +113,13 @@ namespace DiplomProject
                             isUseDataBinding: control.UseDataBinding,
                             isUseDatabase: control.UseDatabase,
                             dbProvider: control.SelectedDbProvider,
-                            isAddingMethod: control.AddAdding,
-                            isEditingMethod: control.AddEditing,
-                            isDeletingMethod: control.AddDeleting
+                            isAddingMethod: control.AddAddingMethod,
+                            isEditingMethod: control.AddEditingMethod,
+                            isDeletingMethod: control.AddDeletingMethod,
+                            isAddingButton: control.AddAddingButton,
+                            isEditingButton: control.AddEditingButton,
+                            isDeletingButton: control.AddDeletingButton,
+                            isDialog: control.AddDialog
                             );
 
                         // Показываем сообщение об успехе
