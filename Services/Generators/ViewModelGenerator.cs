@@ -34,7 +34,8 @@ namespace DiplomProject.Services.Generators
             string dbProvider, 
             bool isAddingMethod, 
             bool isEditingMethod, 
-            bool isDeletingMethod)
+            bool isDeletingMethod,
+            bool isDialog)
         {
             ThreadHelper.ThrowIfNotOnUIThread();
             try
@@ -53,7 +54,7 @@ namespace DiplomProject.Services.Generators
                 
                 SaveProjectAndPath(viewModelPath, viewModelContent, targetProjectItem);
 
-                if (isAddingMethod || isEditingMethod)
+                if (isDialog)
                 {
                     string dialogViewModelContent = _dialogViewModelBuilder.BuildDialogViewModelContent(modelClass);
                     string dialogViewModelName = $"Dialog{modelClass.Name}ViewModel.cs";

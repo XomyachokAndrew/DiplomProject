@@ -27,9 +27,10 @@ namespace DiplomProject.Services.Generators
             CodeClass modelClass,
             ProjectItem targetProjectItem,
             bool isUseDataBinding,
-            bool isAddingMethod,
-            bool isEditingMethod,
-            bool isDeletingMethod)
+            bool isAddingButton,
+            bool isEditingButton,
+            bool isDeletingButton,
+            bool isDialog)
         {
             ThreadHelper.ThrowIfNotOnUIThread();
             try
@@ -43,7 +44,7 @@ namespace DiplomProject.Services.Generators
                 }
 
                 string viewName = $"{modelClass.Name}View";
-                var (xamlContent, csContent) = _xamlBuilder.BuildViewContent(modelClass, isUseDataBinding, isAddingMethod, isEditingMethod, isDeletingMethod);
+                var (xamlContent, csContent) = _xamlBuilder.BuildViewContent(modelClass, isUseDataBinding, isAddingButton, isEditingButton, isDeletingButton);
 
                 SaveAndAddToProject(
                     targetProjectItem,
@@ -54,7 +55,7 @@ namespace DiplomProject.Services.Generators
                     csContent,
                     "Views");
 
-                if (isAddingMethod || isEditingMethod)
+                if (isDialog)
                 {
                     var (dialogXamlContent, dialogCsContent) = _dialogBuilder.BuildDialogContent(modelClass, isUseDataBinding);
 

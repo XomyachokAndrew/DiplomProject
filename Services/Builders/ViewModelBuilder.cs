@@ -70,7 +70,7 @@ namespace DiplomProject.Services.Builder
 
 namespace {namespaces["project"]}.ViewModels
 {{
-    public class {codeClass.Name}ViewModel : INotifyPropertyChanged
+    public partial class {codeClass.Name}ViewModel : INotifyPropertyChanged
     {{
         public event PropertyChangedEventHandler? PropertyChanged;
         {dbUsingCode}

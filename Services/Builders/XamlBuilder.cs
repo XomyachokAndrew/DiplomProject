@@ -14,14 +14,14 @@ namespace DiplomProject.Services.Builder
         public (string xamlContent, string csContent) BuildViewContent(
             CodeClass codeClass, 
             bool isUseDataBinding, 
-            bool isAddingMethod, 
-            bool isEditingMethod, 
-            bool isDeletingMethod)
+            bool isAddingButton, 
+            bool isEditingButton, 
+            bool isDeletingButton)
         {
             ThreadHelper.ThrowIfNotOnUIThread();
             var namespaces = _namespaceResolver.GetProjectNamespace(codeClass);
 
-            string xamlContent = BuildXamlContent(codeClass, isUseDataBinding, namespaces, isAddingMethod, isEditingMethod, isDeletingMethod);
+            string xamlContent = BuildXamlContent(codeClass, isUseDataBinding, namespaces, isAddingButton, isEditingButton, isDeletingButton);
             string csContent = BuildCsForXamlContent(codeClass, isUseDataBinding, namespaces);
 
             return (xamlContent, csContent);
@@ -113,7 +113,7 @@ namespace DiplomProject.Services.Builder
                 : "";
 
             return $@"using System.Windows;
-using {namespaces["project"]}.ViewModels;
+{(isUseDataBinding ? $"using {namespaces["project"]}.ViewModels;" : "")}
 
 namespace {namespaces["project"]}.Views
 {{

@@ -32,7 +32,11 @@ namespace DiplomProject.Services
             string dbProvider,
             bool isAddingMethod,
             bool isEditingMethod,
-            bool isDeletingMethod
+            bool isDeletingMethod,
+            bool isAddingButton,
+            bool isEditingButton,
+            bool isDeletingButton,
+            bool isDialog
             ) 
         {
             ThreadHelper.ThrowIfNotOnUIThread();
@@ -47,14 +51,23 @@ namespace DiplomProject.Services
                 _viewGenerator.GenerateViewFiles(
                     codeClass, 
                     selectedItem, 
-                    isUseDataBinding, 
-                    isAddingMethod, 
-                    isEditingMethod, 
-                    isDeletingMethod);
+                    isUseDataBinding,
+                    isAddingButton,
+                    isEditingButton,
+                    isDeletingButton,
+                    isDialog);
 
                 if (isGenerateViewModel)
                 {
-                    _viewModelGenerator.GenerateViewModel(codeClass, selectedItem, isUseDatabase, dbProvider, isAddingMethod, isEditingMethod, isDeletingMethod);
+                    _viewModelGenerator.GenerateViewModel(
+                        codeClass, 
+                        selectedItem, 
+                        isUseDatabase, 
+                        dbProvider, 
+                        isAddingMethod, 
+                        isEditingMethod, 
+                        isDeletingMethod, 
+                        isDialog);
                 }
 
                 _messageService.ShowSuccessMessage($"XAML for {className} successfully generated!");

@@ -32,7 +32,7 @@ using System.Windows.Input;
 using System.Windows;
 namespace {namespaces["project"]}.ViewModels
 {{
-    public class Dialog{codeClass.Name}ViewModel : INotifyPropertyChanged
+    public partial class Dialog{codeClass.Name}ViewModel : INotifyPropertyChanged
     {{
         public event PropertyChangedEventHandler PropertyChanged;
 
