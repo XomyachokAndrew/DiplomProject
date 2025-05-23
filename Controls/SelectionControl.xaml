@@ -31,12 +31,6 @@
             <CheckBox Name="GenerateViewModelCheckBox" Content="Создание ViewModel" Margin="0,2" Checked="GenerateViewModelCheckBox_Checked" Unchecked="GenerateViewModelCheckBox_Unchecked"/>
             <CheckBox Name="UseDataBindingCheckBox" Content="Используйте привязку данных" Margin="0,2" IsEnabled="False"/>
             <CheckBox Name="AddDialogCheckBox" Content="Добавить диалоговое окно" Margin="0,2"/>
-            <Label Content="Кнопки:"/>
-            <StackPanel Margin="20,0,0,0">
-                <CheckBox Name="AddButtonAddingCheckBox" Content="Добавить кнопку добавления" Margin="0,2"/>
-                <CheckBox Name="AddButtonEditCheckBox" Content="Добавить кнопку изменения" Margin="0,2"/>
-                <CheckBox Name="AddButtonDeleteCheckBox" Content="Добавить кнопку удаления" Margin="0,2"/>
-            </StackPanel>
             <Label Content="Методы:"/>
             <StackPanel Margin="20,0,0,0">
                 <CheckBox Name="AddMethodAddingCheckBox" Content="Добавить метод добавления" Margin="0,2" IsEnabled="False"/>
