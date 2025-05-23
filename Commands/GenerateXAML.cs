@@ -3,6 +3,8 @@ using System.ComponentModel.Design;
 using System.Windows;
 using DiplomProject.Controls;
 using DiplomProject.Services;
+using DiplomProject.Services.Detectors;
+using EnvDTE;
 using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.Shell.Interop;
 using Task = System.Threading.Tasks.Task;
@@ -88,13 +90,20 @@ namespace DiplomProject
         {
             ThreadHelper.ThrowIfNotOnUIThread();
 
-            string title = "GenerateXAML";
+            string title = "Генерация Xaml";
 
-            var dialog = new Window
+            // Получаем текущий проект
+            var dte = (DTE)Package.GetGlobalService(typeof(DTE));
+            Project activeProject = GetActiveProject(dte);
+
+            // Определяем платформу
+            var platform = ProjectPlatformDetector.Detect(activeProject);
+
+            var dialog = new System.Windows.Window
             {
                 Title = title,
                 Width = 400,
-                Height = 400,
+                Height = 500,
                 Content = new SelectionControl(),
                 WindowStartupLocation = WindowStartupLocation.CenterScreen,
             };
@@ -105,7 +114,7 @@ namespace DiplomProject
                 {
                     try
                     {
-                        var xamlGenerator = new XamlGeneratorService(package);
+                        var xamlGenerator = new XamlGeneratorService(package, platform);
 
                         xamlGenerator.GenerateXaml(
                             className: control.SelectedModel,
@@ -116,9 +125,6 @@ namespace DiplomProject
                             isAddingMethod: control.AddAddingMethod,
                             isEditingMethod: control.AddEditingMethod,
                             isDeletingMethod: control.AddDeletingMethod,
-                            isAddingButton: control.AddAddingButton,
-                            isEditingButton: control.AddEditingButton,
-                            isDeletingButton: control.AddDeletingButton,
                             isDialog: control.AddDialog
                             );
 
@@ -153,6 +159,20 @@ namespace DiplomProject
             }
 
             dialog.ShowDialog();
+        }
+
+        private Project GetActiveProject(DTE dte)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            try
+            {
+                Array activeProjects = (Array)dte.ActiveSolutionProjects;
+                return activeProjects.Length > 0 ? (Project)activeProjects.GetValue(0) : null;
+            }
+            catch
+            {
+                return null;
+            }
         }
     }
 }
