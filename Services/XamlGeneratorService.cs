@@ -3,71 +3,63 @@ using DiplomProject.Services.Generators;
 using DiplomProject.Services.Finders;
 using EnvDTE;
 using Microsoft.VisualStudio.Shell;
-using System.IO;
+using System.ComponentModel;
+using DiplomProject.Enum;
 
 namespace DiplomProject.Services
 {
     public class XamlGeneratorService
     {
+        private readonly PlatformType _platform;
         private readonly AsyncPackage _package;
         private readonly ViewGenerator _viewGenerator;
         private readonly ViewModelGenerator _viewModelGenerator;
-        private readonly DataSourceFinder _dataSourceFinder; 
         private readonly MessageService _messageService;
 
-        public XamlGeneratorService(AsyncPackage package)
+        public XamlGeneratorService(AsyncPackage package, PlatformType platform)
         {
+            _platform = platform;
             _package = package ?? throw new ArgumentNullException(nameof(package));
-            _viewGenerator = new ViewGenerator(package);
-            _viewModelGenerator = new ViewModelGenerator(package);
-            _dataSourceFinder = new DataSourceFinder();
+            _viewGenerator = new ViewGenerator(package, platform);
+            _viewModelGenerator = new ViewModelGenerator(package, platform);
             _messageService = new MessageService(package);
         }
 
         public void GenerateXaml(
-            string className, 
-            bool isGenerateViewModel, 
-            bool isUseDataBinding, 
-            bool isUseDatabase, 
+            string className,
+            bool isGenerateViewModel,
+            bool isUseDataBinding,
+            bool isUseDatabase,
             string dbProvider,
             bool isAddingMethod,
             bool isEditingMethod,
             bool isDeletingMethod,
-            bool isAddingButton,
-            bool isEditingButton,
-            bool isDeletingButton,
-            bool isDialog
-            ) 
+            bool isDialog)
         {
             ThreadHelper.ThrowIfNotOnUIThread();
+
+            if (string.IsNullOrWhiteSpace(className))
+                throw new ArgumentException("Class name cannot be empty", nameof(className));
+
             try
             {
                 var dte = (DTE)Package.GetGlobalService(typeof(DTE));
+                if (dte.SelectedItems.Count == 0)
+                    throw new InvalidOperationException("No project item selected");
+
                 var selectedItem = dte.SelectedItems.Item(1).ProjectItem;
 
                 var codeClassfinder = new CodeClassFinder();
-                var codeClass = codeClassfinder.FindClassByName(className) ?? throw new Exception($"Class {className} not found");
-                
-                _viewGenerator.GenerateViewFiles(
-                    codeClass, 
-                    selectedItem, 
-                    isUseDataBinding,
-                    isAddingButton,
-                    isEditingButton,
-                    isDeletingButton,
+                var codeClass = codeClassfinder.FindClassByName(className)
+                    ?? throw new InvalidOperationException($"Class {className} not found");
+
+                GenerateViewComponents(codeClass, selectedItem, isUseDataBinding,
                     isDialog);
 
                 if (isGenerateViewModel)
                 {
-                    _viewModelGenerator.GenerateViewModel(
-                        codeClass, 
-                        selectedItem, 
-                        isUseDatabase, 
-                        dbProvider, 
-                        isAddingMethod, 
-                        isEditingMethod, 
-                        isDeletingMethod, 
-                        isDialog);
+                    GenerateViewModelComponents(codeClass, selectedItem, isUseDatabase,
+                        dbProvider, isAddingMethod, isEditingMethod, isDeletingMethod, isDialog);
                 }
 
                 _messageService.ShowSuccessMessage($"XAML for {className} successfully generated!");
@@ -75,7 +67,42 @@ namespace DiplomProject.Services
             catch (Exception ex)
             {
                 _messageService.ShowErrorMessage($"Error generating XAML: {ex.Message}");
+                throw;
             }
+        }
+
+        private void GenerateViewComponents(
+            CodeClass codeClass,
+            ProjectItem selectedItem,
+            bool isUseDataBinding,
+            bool isDialog)
+        {
+            _viewGenerator.GenerateViewFiles(
+                codeClass,
+                selectedItem,
+                isUseDataBinding,
+                isDialog);
+        }
+
+        private void GenerateViewModelComponents(
+            CodeClass codeClass,
+            ProjectItem selectedItem,
+            bool isUseDatabase,
+            string dbProvider,
+            bool isAddingMethod,
+            bool isEditingMethod,
+            bool isDeletingMethod,
+            bool isDialog)
+        {
+            _viewModelGenerator.GenerateViewModel(
+                codeClass,
+                selectedItem,
+                isUseDatabase,
+                dbProvider,
+                isAddingMethod,
+                isEditingMethod,
+                isDeletingMethod,
+                isDialog);
         }
     }
 }

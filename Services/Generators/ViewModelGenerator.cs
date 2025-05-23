@@ -1,29 +1,28 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using DiplomProject.Services.Builder;
 using EnvDTE;
-using Microsoft.VisualStudio.Shell.Interop;
 using Microsoft.VisualStudio.Shell;
 using DiplomProject.Services.Builders;
+using DiplomProject.Enum;
 
 namespace DiplomProject.Services.Generators
 {
     public class ViewModelGenerator
     {
         private readonly AsyncPackage _package;
+        private readonly PlatformType _platform;
         private readonly ViewModelBuilder _viewModelBuilder;
         private readonly MessageService _messageService;
         private readonly DialogViewModelBuilder _dialogViewModelBuilder;
 
-        public ViewModelGenerator(AsyncPackage package)
+        public ViewModelGenerator(AsyncPackage package, PlatformType platform)
         {
+            _platform = platform;
             _package = package ?? throw new ArgumentNullException(nameof(package));
-            _viewModelBuilder = new ViewModelBuilder();
-            _dialogViewModelBuilder = new DialogViewModelBuilder();
+            _viewModelBuilder = new ViewModelBuilder(platform);
+            _dialogViewModelBuilder = new DialogViewModelBuilder(platform);
             _messageService = new MessageService(package);
         }
 
@@ -48,7 +47,7 @@ namespace DiplomProject.Services.Generators
                     Directory.CreateDirectory(viewModelsFolder);
                 }
 
-                string viewModelContent = _viewModelBuilder.BuildViewModelContent(modelClass, isUseDatabase, dbProvider, isAddingMethod, isEditingMethod, isDeletingMethod);
+                string viewModelContent = _viewModelBuilder.BuildViewModelContent(modelClass, isUseDatabase, dbProvider, isAddingMethod, isEditingMethod, isDeletingMethod, isDialog);
                 string viewModelName = $"{modelClass.Name}ViewModel.cs";
                 string viewModelPath = Path.Combine(viewModelsFolder, viewModelName);
                 

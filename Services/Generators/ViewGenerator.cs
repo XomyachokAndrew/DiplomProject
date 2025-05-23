@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using System.Linq;
+using DiplomProject.Enum;
 using DiplomProject.Services.Builder;
 using DiplomProject.Services.Builders;
 using EnvDTE;
@@ -10,16 +11,18 @@ namespace DiplomProject.Services.Generators
 {
     public class ViewGenerator
     {
+        private readonly PlatformType _platform;
         private readonly AsyncPackage _package;
         private readonly XamlBuilder _xamlBuilder;
         private readonly MessageService _messageService;
         private readonly DialogBuilder _dialogBuilder;
 
-        public ViewGenerator(AsyncPackage package)
+        public ViewGenerator(AsyncPackage package, PlatformType platform)
         {
+            _platform = platform;
             _package = package ?? throw new ArgumentNullException(nameof(package));
-            _xamlBuilder = new XamlBuilder();
-            _dialogBuilder = new DialogBuilder();
+            _xamlBuilder = new XamlBuilder(platform);
+            _dialogBuilder = new DialogBuilder(platform);
             _messageService = new MessageService(package);
         }
 
@@ -27,9 +30,6 @@ namespace DiplomProject.Services.Generators
             CodeClass modelClass,
             ProjectItem targetProjectItem,
             bool isUseDataBinding,
-            bool isAddingButton,
-            bool isEditingButton,
-            bool isDeletingButton,
             bool isDialog)
         {
             ThreadHelper.ThrowIfNotOnUIThread();
@@ -44,7 +44,7 @@ namespace DiplomProject.Services.Generators
                 }
 
                 string viewName = $"{modelClass.Name}View";
-                var (xamlContent, csContent) = _xamlBuilder.BuildViewContent(modelClass, isUseDataBinding, isAddingButton, isEditingButton, isDeletingButton);
+                var (xamlContent, csContent) = _xamlBuilder.BuildViewContent(modelClass, isUseDataBinding);
 
                 SaveAndAddToProject(
                     targetProjectItem,

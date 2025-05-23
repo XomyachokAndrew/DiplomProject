@@ -1,17 +1,32 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Text;
+using DiplomProject.Enum;
 using DiplomProject.Services.Finders;
+using DiplomProject.Services.Generators;
+using DiplomProject.Services.Handler;
 using DiplomProject.Services.Resolver;
 using EnvDTE;
+using EnvDTE80;
 using Microsoft.VisualStudio.Shell;
+using static System.Windows.Forms.VisualStyles.VisualStyleElement.Window;
 
 namespace DiplomProject.Services.Builder
 {
     public class ViewModelBuilder
     {
-        private readonly NamespaceResolver _namespaceResolver = new NamespaceResolver();
-        private readonly DataSourceResolver _dataSourceResolver = new DataSourceResolver();
-        private readonly DataSourceFinder _dataSourceFinder = new DataSourceFinder();
+        private readonly PlatformType _platform;
+        private readonly NamespaceResolver _namespaceResolver;
+        private readonly DataSourceResolver _dataSourceResolver;
+        private readonly DataSourceFinder _dataSourceFinder;
+
+        public ViewModelBuilder(PlatformType platform) 
+        {
+            _platform = platform;
+            _namespaceResolver = new NamespaceResolver(platform);
+            _dataSourceResolver = new DataSourceResolver();
+            _dataSourceFinder = new DataSourceFinder();
+        }
 
         public string BuildViewModelContent(
             CodeClass modelClass, 
@@ -19,7 +34,8 @@ namespace DiplomProject.Services.Builder
             string dbProvider, 
             bool isAddingMethod, 
             bool isEditingMethod, 
-            bool isDeletingMethod)
+            bool isDeletingMethod,
+            bool isDialog)
         {
             ThreadHelper.ThrowIfNotOnUIThread();
             var namespaces = _namespaceResolver.GetProjectNamespace(modelClass);
@@ -33,9 +49,9 @@ namespace DiplomProject.Services.Builder
             var usingsCode = new StringBuilder();
 
             BuildInitializationCode(modelClass, initializationCode, isUseDatabase, dbProvider);
-            BuildEdit(isEditingMethod, modelClass, editItemCode);
-            BuildAdd(isAddingMethod, modelClass, addItemCode);
-            BuildDelete(isDeletingMethod, deleteItemCode);
+            BuildEdit(isEditingMethod, isDialog, modelClass, editItemCode);
+            BuildAdd(isAddingMethod, isDialog, modelClass, addItemCode);
+            BuildDelete(isDeletingMethod, modelClass, deleteItemCode);
             BuildSaveChanges(isUseDatabase, dbProvider, saveChangesCode);
             BuildUsingsContent(namespaces, isUseDatabase, dbProvider, usingsCode);
             _dataSourceFinder.BuildDbUsingCode(modelClass, isUseDatabase, dbProvider, dbUsingCode);
@@ -66,6 +82,13 @@ namespace DiplomProject.Services.Builder
             StringBuilder usingsCode)
         {
             ThreadHelper.ThrowIfNotOnUIThread();
+
+            var platformSpecific = new PlatformSpecificCodeGenerator(_platform);
+            var commandType = platformSpecific.GetCommandType();
+            var commandInitialization = platformSpecific.GetCommandInitializationCode();
+            var notifyCommandChanged = platformSpecific.GetNotifyCommandChangedCode();
+
+
             return $@"{usingsCode}
 
 namespace {namespaces["project"]}.ViewModels
@@ -95,42 +118,38 @@ namespace {namespaces["project"]}.ViewModels
             {{
                 _selectedItem = value;
                 OnPropertyChanged(nameof(SelectedItem));
-                DeleteCommand.NotifyCanExecuteChanged(); // Обновляем доступность команд
-                EditCommand.NotifyCanExecuteChanged();
+                {notifyCommandChanged}
             }}
         }}
 
         // **Команды**
-        public IRelayCommand AddCommand {{ get; }}
-        public IRelayCommand EditCommand {{ get; }}
-        public IRelayCommand DeleteCommand {{ get; }}
-        public IRelayCommand SaveCommand {{ get; }}
+        public {commandType} AddCommand {{ get; }}
+        public {commandType} EditCommand {{ get; }}
+        public {commandType} DeleteCommand {{ get; }}
+        public {commandType} SaveCommand {{ get; }}
 
         public {codeClass.Name}ViewModel()
         {{
             LoadItems();
-            AddCommand = new RelayCommand(AddItem);
-            EditCommand = new RelayCommand(EditItem, () => SelectedItem != null);
-            DeleteCommand = new RelayCommand(DeleteItem, () => SelectedItem != null);
-            SaveCommand = new RelayCommand(SaveChanges);
+            {commandInitialization}
         }}
 
-        private void LoadItems() 
+        private async void LoadItems() 
         {{
             {initializationCode}
         }}
 
-        private void AddItem()
+        private async void AddItem()
         {{
             {addItemCode}
         }}
 
-        private void EditItem()
+        private async void EditItem()
         {{
             {editItemCode}
         }}
 
-        private void DeleteItem()
+        private async void DeleteItem()
         {{
             {deleteItemCode}
         }}
@@ -146,7 +165,7 @@ namespace {namespaces["project"]}.ViewModels
 }}";
         }
 
-        private void BuildEdit(bool isEdit, CodeClass codeClass, StringBuilder editItemCode)
+        private void BuildEdit(bool isEdit, bool isDialog, CodeClass codeClass, StringBuilder editItemCode)
         {
             ThreadHelper.ThrowIfNotOnUIThread();
 
@@ -156,56 +175,12 @@ namespace {namespaces["project"]}.ViewModels
             }
             else
             {
-                var itemProperty = new StringBuilder();
-
-                foreach (CodeElement member in codeClass.Members)
-                {
-                    if (member is CodeProperty property)
-                    {
-                        itemProperty.AppendLine($@"{property.Name} = SelectedItem.{property.Name},");
-                    }
-                }
-
-                var itemProp = new StringBuilder();
-
-                foreach (CodeElement member in codeClass.Members)
-                {
-                    if (member is CodeProperty property)
-                    {
-                        itemProp.AppendLine($@"SelectedItem.{property.Name} = updatedItem.{property.Name};");
-                    }
-                }
-
-                editItemCode.AppendLine($@"
-            if (SelectedItem != null)
-            {{
-                var itemCopy = new {codeClass.Name}
-                {{
-                    {itemProperty}    
-                }};
-
-                var dialogVm = new Dialog{codeClass.Name}ViewModel(itemCopy, ""Edit {codeClass.Name}"");
-                var dialog = new Dialog{codeClass.Name}View
-                {{
-                    Owner = Application.Current.MainWindow,
-                    DataContext = dialogVm
-                }};
-
-                dialog.ShowDialog();
-
-                if (dialogVm.IsSaved)
-                {{
-                    var updatedItem = dialogVm.GetItem();
-                    {itemProp}
-                    SaveChanges();
-                }}
-                OnPropertyChanged(nameof(Items)); // Обновляем список
-            }}
-");
+                var dialogHandler = new DialogHandler(_platform, codeClass);
+                editItemCode.Append(dialogHandler.GetEditDialogCode(isDialog));
             }
         }
 
-        private void BuildAdd(bool isAdd, CodeClass codeClass, StringBuilder addItemCode)
+        private void BuildAdd(bool isAdd, bool isDialog, CodeClass codeClass, StringBuilder addItemCode)
         {
             ThreadHelper.ThrowIfNotOnUIThread();
 
@@ -215,42 +190,12 @@ namespace {namespaces["project"]}.ViewModels
             }
             else
             {
-                var itemProp = new StringBuilder();
-                var clearProp = new StringBuilder();
-
-                foreach (CodeElement member in codeClass.Members)
-                {
-                    if (member is CodeProperty property)
-                    {
-                        if (property.Name != "Id")
-                        {
-                            itemProp.AppendLine($@"{property.Name} = New{property.Name},");
-                        }
-                    }
-                }
-
-                addItemCode.AppendLine($@"
-            var dialogVm = new Dialog{codeClass.Name}ViewModel(title: ""Add New {codeClass.Name}"");
-            var dialog = new Dialog{codeClass.Name}View
-            {{
-                Owner = Application.Current.MainWindow,
-                DataContext = dialogVm
-            }};
-
-            dialog.ShowDialog();
-
-            if (dialogVm.IsSaved)
-            {{
-                var newItem = dialogVm.GetItem();
-                newItem.Id = Items.Any() ? Items.Max(p => p.Id) + 1 : 1;
-                Items.Add(newItem);
-                SaveChanges();
-            }}
-");
+                var dialogHandler = new DialogHandler(_platform, codeClass);
+                addItemCode.Append(dialogHandler.GetAddDialogCode(isDialog));
             }
         }
 
-        private void BuildDelete(bool isDelete, StringBuilder deleteItemCode)
+        private void BuildDelete(bool isDelete, CodeClass codeClass, StringBuilder deleteItemCode)
         {
             if (!isDelete)
             {
@@ -258,12 +203,8 @@ namespace {namespaces["project"]}.ViewModels
             }
             else
             {
-                deleteItemCode.AppendLine($@"if (SelectedItem != null && MessageBox.Show(""Delete this item?"", ""Confirm"", 
-                MessageBoxButton.YesNo) == MessageBoxResult.Yes)
-            {{
-                Items.Remove(SelectedItem);
-                SaveChanges();
-            }}");
+                var dialogHandler = new DialogHandler(_platform, codeClass);
+                deleteItemCode.Append(dialogHandler.GetDeleteConfirmationCode());
             }
         }
 
