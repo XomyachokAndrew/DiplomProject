@@ -49,6 +49,7 @@
     <Compile Include="Controls\SelectionControl.xaml.cs">
       <DependentUpon>SelectionControl.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Enum\PlatformType.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="DiplomProjectPackage.cs" />
     <Compile Include="Services\Builders\DialogViewModelBuilder.cs" />
@@ -58,10 +59,13 @@
     <Compile Include="Services\Builders\PropertyControlBuilder.cs" />
     <Compile Include="Services\Builders\ViewModelBuilder.cs" />
     <Compile Include="Services\Builders\XamlBuilder.cs" />
+    <Compile Include="Services\Detectors\ProjectPlatformDetector.cs" />
     <Compile Include="Services\Finders\CodeClassFinder.cs" />
     <Compile Include="Services\Finders\DataSourceFinder.cs" />
+    <Compile Include="Services\Generators\PlatformSpecificCodeGenerator.cs" />
     <Compile Include="Services\Generators\ViewGenerator.cs" />
     <Compile Include="Services\Generators\ViewModelGenerator.cs" />
+    <Compile Include="Services\Handler\DialogHandler.cs" />
     <Compile Include="Services\MessageService.cs" />
     <Compile Include="Services\Resolvers\DataSourceResolver.cs" />
     <Compile Include="Services\Resolvers\NamespaceResolver.cs" />
